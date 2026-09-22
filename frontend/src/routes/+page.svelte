@@ -20,6 +20,7 @@
 	import PlaceholderView from "$lib/components/views/PlaceholderView.svelte";
 	import PullRequestsView from "$lib/components/views/PullRequestsView.svelte";
 	import PullRequestDetailView from "$lib/components/views/PullRequestDetailView.svelte";
+	import IssuesView from "$lib/components/views/IssuesView.svelte";
 	import NewPullRequestModal from "$lib/components/modals/NewPullRequestModal.svelte";
 	import { quay } from "$lib/state/app-state.svelte";
 
@@ -61,7 +62,7 @@
 			{:else if quay.activeView === "pr-detail"}
 				<PullRequestDetailView />
 			{:else if quay.activeView === "issues"}
-				<PlaceholderView title="No issues here" subtitle="GitHub issue support is coming in a later phase." />
+				<IssuesView />
 			{:else if quay.activeView === "actions"}
 				<PlaceholderView title="No workflow runs here" subtitle="GitHub Actions support is coming in a later phase." />
 			{:else if quay.activeView === "releases"}

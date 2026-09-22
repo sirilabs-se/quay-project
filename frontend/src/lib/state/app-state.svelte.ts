@@ -5,6 +5,7 @@ import type {
 	DetectionResponse,
 	FileDiff,
 	GitHubAccount,
+	IssueSummary,
 	Label,
 	PullRequestDetail,
 	PullRequestSummary,
@@ -21,6 +22,8 @@ import { ApiError, apiFetch } from "$lib/api/client";
 import * as githubApi from "$lib/api/github";
 import * as prApi from "$lib/api/pull-requests";
 import type { PullRequestStateFilter } from "$lib/api/pull-requests";
+import * as issueApi from "$lib/api/issues";
+import type { IssueStateFilter } from "$lib/api/issues";
 import { connectEvents, connectRepositoryAction } from "$lib/api/ws";
 
 export type ViewName =
@@ -122,6 +125,10 @@ class QuayState {
 		assignees: [],
 		labels: []
 	});
+
+	issues = $state<IssueSummary[]>([]);
+	issueFilter = $state<IssueStateFilter>("open");
+	issueLoadError = $state<string | null>(null);
 
 	toasts = $state<ToastMessage[]>([]);
 	consoleLines = $state<ConsoleLine[]>([]);
@@ -277,6 +284,9 @@ class QuayState {
 			case "prs":
 				await this.refreshPullRequests();
 				break;
+			case "issues":
+				await this.refreshIssues();
+				break;
 			default:
 				await this.refreshStatus(id);
 		}
@@ -353,6 +363,63 @@ class QuayState {
 		} catch (err) {
 			this.toast(err instanceof ApiError ? err.message : "Failed to close pull request", "error");
 		}
+	}
+
+	async refreshIssues(): Promise<void> {
+		if (!this.activeRepoId) return;
+		this.issueLoadError = null;
+		try {
+			this.issues = await issueApi.listIssues(this.activeRepoId, this.issueFilter);
+		} catch (err) {
+			this.issueLoadError = err instanceof ApiError ? err.message : "Failed to load issues";
+			this.issues = [];
+		}
+	}
+
+	async setIssueFilter(filter: IssueStateFilter): Promise<void> {
+		this.issueFilter = filter;
+		await this.refreshIssues();
+	}
+
+	async openNewIssueModal(): Promise<void> {
+		if (!this.prMeta && this.activeRepoId) {
+			try {
+				this.prMeta = await prApi.getPullRequestMeta(this.activeRepoId);
+			} catch {
+				this.prMeta = { labels: [], collaborators: [] };
+			}
+		}
+		this.openFormModal({
+			title: "New issue",
+			fields: [
+				{ key: "title", label: "Title", type: "text", value: "" },
+				{ key: "description", label: "Description", type: "textarea", value: "" },
+				{
+					key: "assignee",
+					label: "Assignee",
+					type: "select",
+					value: "Unassigned",
+					options: ["Unassigned", ...this.prMeta?.collaborators ?? []]
+				}
+			],
+			submitLabel: "Create issue",
+			onSubmit: async (values) => {
+				const title = String(values.title ?? "").trim();
+				if (!title) {
+					this.toast("Title is required", "info");
+					return;
+				}
+				if (!this.activeRepoId) return;
+				try {
+					const assignee = values.assignee === "Unassigned" ? null : String(values.assignee ?? "");
+					const issue = await issueApi.createIssue(this.activeRepoId, { title, body: String(values.description ?? ""), assignee });
+					this.toast(`Opened issue #${issue.number}`, "success");
+					await this.refreshIssues();
+				} catch (err) {
+					this.toast(err instanceof ApiError ? err.message : "Failed to create issue", "error");
+				}
+			}
+		});
 	}
 
 	async refreshStatus(id: string = this.activeRepoId!): Promise<void> {

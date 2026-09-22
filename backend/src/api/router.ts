@@ -1,6 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { handleDetection } from "./detection.js";
 import { handleListAccounts, handleRepositoryAccount, handleSwitchAccount } from "./github.js";
+import { handleCreateIssue, handleListIssues } from "./issues.js";
 import {
 	handleClosePullRequest,
 	handleCreatePullRequest,
@@ -98,7 +99,10 @@ const routes: Route[] = [
 	{ method: "GET", pattern: /^\/api\/repositories\/(?<id>[^/]+)\/pulls\/meta$/, handler: handlePullRequestMeta },
 	{ method: "GET", pattern: /^\/api\/repositories\/(?<id>[^/]+)\/pulls\/(?<number>\d+)$/, handler: handleGetPullRequest },
 	{ method: "POST", pattern: /^\/api\/repositories\/(?<id>[^/]+)\/pulls\/(?<number>\d+)\/merge$/, handler: handleMergePullRequest },
-	{ method: "POST", pattern: /^\/api\/repositories\/(?<id>[^/]+)\/pulls\/(?<number>\d+)\/close$/, handler: handleClosePullRequest }
+	{ method: "POST", pattern: /^\/api\/repositories\/(?<id>[^/]+)\/pulls\/(?<number>\d+)\/close$/, handler: handleClosePullRequest },
+
+	{ method: "GET", pattern: /^\/api\/repositories\/(?<id>[^/]+)\/issues$/, handler: handleListIssues },
+	{ method: "POST", pattern: /^\/api\/repositories\/(?<id>[^/]+)\/issues$/, handler: handleCreateIssue }
 ];
 
 /** Returns true if a route matched (and handled the response), false otherwise. */
