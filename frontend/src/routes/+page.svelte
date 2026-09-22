@@ -18,6 +18,9 @@
 	import RemotesView from "$lib/components/views/RemotesView.svelte";
 	import SettingsView from "$lib/components/views/SettingsView.svelte";
 	import PlaceholderView from "$lib/components/views/PlaceholderView.svelte";
+	import PullRequestsView from "$lib/components/views/PullRequestsView.svelte";
+	import PullRequestDetailView from "$lib/components/views/PullRequestDetailView.svelte";
+	import NewPullRequestModal from "$lib/components/modals/NewPullRequestModal.svelte";
 	import { quay } from "$lib/state/app-state.svelte";
 
 	let initError = $state<string | null>(null);
@@ -54,7 +57,9 @@
 			{:else if quay.activeView === "settings"}
 				<SettingsView />
 			{:else if quay.activeView === "prs"}
-				<PlaceholderView title="No pull requests here" subtitle="GitHub pull request support is coming in a later phase." />
+				<PullRequestsView />
+			{:else if quay.activeView === "pr-detail"}
+				<PullRequestDetailView />
 			{:else if quay.activeView === "issues"}
 				<PlaceholderView title="No issues here" subtitle="GitHub issue support is coming in a later phase." />
 			{:else if quay.activeView === "actions"}
@@ -71,4 +76,5 @@
 <FormModal />
 <ConfirmModal />
 <AccountSwitchModal />
+<NewPullRequestModal />
 <ToastStack />

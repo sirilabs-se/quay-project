@@ -19,6 +19,11 @@
 	];
 
 	let changesCount = $derived(quay.flatFiles.length);
+	let prCount = $derived(quay.pullRequests.filter((p) => p.state === "open").length);
+
+	function isActive(view: ViewName): boolean {
+		return quay.activeView === view || (quay.activeView === "pr-detail" && view === "prs");
+	}
 
 	function activate(view: ViewName): void {
 		void quay.setActiveView(view);
@@ -37,7 +42,7 @@
 		{#each localTabs as tab (tab.view)}
 			<div
 				class="subnav-tab"
-				class:active={quay.activeView === tab.view}
+				class:active={isActive(tab.view)}
 				onclick={() => activate(tab.view)}
 				onkeydown={(e) => onTabKeydown(e, tab.view)}
 				role="button"
@@ -53,13 +58,14 @@
 		{#each githubTabs as tab (tab.view)}
 			<div
 				class="subnav-tab"
-				class:active={quay.activeView === tab.view}
+				class:active={isActive(tab.view)}
 				onclick={() => activate(tab.view)}
 				onkeydown={(e) => onTabKeydown(e, tab.view)}
 				role="button"
 				tabindex="0"
 			>
 				{tab.label}
+				{#if tab.view === "prs" && prCount > 0}<span class="count">({prCount})</span>{/if}
 			</div>
 		{/each}
 	</div>

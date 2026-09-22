@@ -27,12 +27,13 @@ export class ExecError extends Error {
 export async function runProcess(
 	binary: string,
 	args: readonly string[],
-	options: { timeoutMs?: number; cwd?: string } = {}
+	options: { timeoutMs?: number; cwd?: string; env?: NodeJS.ProcessEnv } = {}
 ): Promise<ExecResult> {
 	try {
 		const { stdout, stderr } = await execFileAsync(binary, args, {
 			timeout: options.timeoutMs ?? 10_000,
 			cwd: options.cwd,
+			env: options.env,
 			shell: false
 		});
 		return { stdout: stdout.toString(), stderr: stderr.toString() };

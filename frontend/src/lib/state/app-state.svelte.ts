@@ -5,6 +5,9 @@ import type {
 	DetectionResponse,
 	FileDiff,
 	GitHubAccount,
+	Label,
+	PullRequestDetail,
+	PullRequestSummary,
 	Remote,
 	Repository,
 	RepositoryAccountInfo,
@@ -16,6 +19,8 @@ import type {
 import * as api from "$lib/api/repositories";
 import { ApiError, apiFetch } from "$lib/api/client";
 import * as githubApi from "$lib/api/github";
+import * as prApi from "$lib/api/pull-requests";
+import type { PullRequestStateFilter } from "$lib/api/pull-requests";
 import { connectEvents, connectRepositoryAction } from "$lib/api/ws";
 
 export type ViewName =
@@ -27,6 +32,7 @@ export type ViewName =
 	| "tags"
 	| "remotes"
 	| "prs"
+	| "pr-detail"
 	| "issues"
 	| "actions"
 	| "releases"
@@ -103,6 +109,19 @@ class QuayState {
 	repositoryAccountInfo = $state<RepositoryAccountInfo | null>(null);
 	accountModalOpen = $state(false);
 	pendingAccountSelection = $state<{ host: string; login: string } | null>(null);
+
+	pullRequests = $state<PullRequestSummary[]>([]);
+	prFilter = $state<PullRequestStateFilter>("open");
+	prLoadError = $state<string | null>(null);
+	selectedPr = $state<PullRequestDetail | null>(null);
+	prDetailTab = $state<"conversation" | "commits" | "files changed" | "checks">("conversation");
+	prMeta = $state<{ labels: Label[]; collaborators: string[] } | null>(null);
+	newPrModalOpen = $state(false);
+	newPrSelection = $state<{ reviewers: string[]; assignees: string[]; labels: string[] }>({
+		reviewers: [],
+		assignees: [],
+		labels: []
+	});
 
 	toasts = $state<ToastMessage[]>([]);
 	consoleLines = $state<ConsoleLine[]>([]);
@@ -255,8 +274,84 @@ class QuayState {
 			case "remotes":
 				await this.refreshRemotes(id);
 				break;
+			case "prs":
+				await this.refreshPullRequests();
+				break;
 			default:
 				await this.refreshStatus(id);
+		}
+	}
+
+	async refreshPullRequests(): Promise<void> {
+		if (!this.activeRepoId) return;
+		this.prLoadError = null;
+		try {
+			this.pullRequests = await prApi.listPullRequests(this.activeRepoId, this.prFilter);
+		} catch (err) {
+			this.prLoadError = err instanceof ApiError ? err.message : "Failed to load pull requests";
+			this.pullRequests = [];
+		}
+	}
+
+	async setPrFilter(filter: PullRequestStateFilter): Promise<void> {
+		this.prFilter = filter;
+		await this.refreshPullRequests();
+	}
+
+	async openPullRequest(number: number): Promise<void> {
+		if (!this.activeRepoId) return;
+		this.prDetailTab = "conversation";
+		this.selectedPr = await prApi.getPullRequest(this.activeRepoId, number);
+		this.activeView = "pr-detail";
+	}
+
+	async openNewPrModal(): Promise<void> {
+		if (!this.activeRepoId) return;
+		this.newPrSelection = { reviewers: [], assignees: [], labels: [] };
+		this.newPrModalOpen = true;
+		try {
+			this.prMeta = await prApi.getPullRequestMeta(this.activeRepoId);
+		} catch {
+			this.prMeta = { labels: [], collaborators: [] };
+		}
+	}
+
+	closeNewPrModal(): void {
+		this.newPrModalOpen = false;
+	}
+
+	async submitNewPr(input: { title: string; body: string; base: string; head: string; draft: boolean }): Promise<void> {
+		if (!this.activeRepoId) return;
+		try {
+			const pr = await prApi.createPullRequest(this.activeRepoId, { ...input, ...this.newPrSelection });
+			this.newPrModalOpen = false;
+			this.toast("Pull request opened", "success");
+			this.selectedPr = pr;
+			this.activeView = "pr-detail";
+		} catch (err) {
+			this.toast(err instanceof ApiError ? err.message : "Failed to create pull request", "error");
+		}
+	}
+
+	async mergePullRequest(number: number, method: "squash" | "merge" | "rebase" = "squash"): Promise<void> {
+		if (!this.activeRepoId) return;
+		try {
+			await prApi.mergePullRequest(this.activeRepoId, number, method, false);
+			this.toast(`Merged #${number}`, "success");
+			await this.setActiveView("prs");
+		} catch (err) {
+			this.toast(err instanceof ApiError ? err.message : "Failed to merge pull request", "error");
+		}
+	}
+
+	async closePullRequest(number: number): Promise<void> {
+		if (!this.activeRepoId) return;
+		try {
+			await prApi.closePullRequest(this.activeRepoId, number);
+			this.toast(`Closed #${number}`, "success");
+			await this.setActiveView("prs");
+		} catch (err) {
+			this.toast(err instanceof ApiError ? err.message : "Failed to close pull request", "error");
 		}
 	}
 

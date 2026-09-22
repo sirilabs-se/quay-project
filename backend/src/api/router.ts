@@ -1,6 +1,14 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { handleDetection } from "./detection.js";
 import { handleListAccounts, handleRepositoryAccount, handleSwitchAccount } from "./github.js";
+import {
+	handleClosePullRequest,
+	handleCreatePullRequest,
+	handleGetPullRequest,
+	handleListPullRequests,
+	handleMergePullRequest,
+	handlePullRequestMeta
+} from "./pull-requests.js";
 import { handleGetSettings, handlePutSettings } from "./settings.js";
 import {
 	handleAddRemote,
@@ -83,7 +91,14 @@ const routes: Route[] = [
 	{ method: "POST", pattern: /^\/api\/repositories\/(?<id>[^/]+)\/tags$/, handler: handleCreateTag },
 
 	{ method: "GET", pattern: /^\/api\/repositories\/(?<id>[^/]+)\/remotes$/, handler: handleGetRemotes },
-	{ method: "POST", pattern: /^\/api\/repositories\/(?<id>[^/]+)\/remotes$/, handler: handleAddRemote }
+	{ method: "POST", pattern: /^\/api\/repositories\/(?<id>[^/]+)\/remotes$/, handler: handleAddRemote },
+
+	{ method: "GET", pattern: /^\/api\/repositories\/(?<id>[^/]+)\/pulls$/, handler: handleListPullRequests },
+	{ method: "POST", pattern: /^\/api\/repositories\/(?<id>[^/]+)\/pulls$/, handler: handleCreatePullRequest },
+	{ method: "GET", pattern: /^\/api\/repositories\/(?<id>[^/]+)\/pulls\/meta$/, handler: handlePullRequestMeta },
+	{ method: "GET", pattern: /^\/api\/repositories\/(?<id>[^/]+)\/pulls\/(?<number>\d+)$/, handler: handleGetPullRequest },
+	{ method: "POST", pattern: /^\/api\/repositories\/(?<id>[^/]+)\/pulls\/(?<number>\d+)\/merge$/, handler: handleMergePullRequest },
+	{ method: "POST", pattern: /^\/api\/repositories\/(?<id>[^/]+)\/pulls\/(?<number>\d+)\/close$/, handler: handleClosePullRequest }
 ];
 
 /** Returns true if a route matched (and handled the response), false otherwise. */

@@ -3,3 +3,4 @@ export * from "./detection.js";
 export * from "./settings.js";
 export * from "./repository.js";
 export * from "./github-account.js";
+export * from "./pull-request.js";
