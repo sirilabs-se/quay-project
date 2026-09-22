@@ -33,7 +33,26 @@
 			initError = err instanceof Error ? err.message : "Failed to start Quay";
 		});
 	});
+
+	function onGlobalKeydown(e: KeyboardEvent): void {
+		if (e.key !== "Escape") return;
+		if (quay.paletteOpen) return; // CommandPalette handles its own Escape
+		if (quay.formModal) {
+			quay.closeFormModal();
+		} else if (quay.confirmModal) {
+			quay.closeConfirm();
+		} else if (quay.accountModalOpen) {
+			quay.closeAccountModal();
+		} else if (quay.conflictModalOpen) {
+			quay.closeConflictModal();
+		} else if (quay.newPrModalOpen) {
+			quay.closeNewPrModal();
+		}
+		quay.closeNotifPanel();
+	}
 </script>
+
+<svelte:window onkeydown={onGlobalKeydown} />
 
 <div class="shell" class:sidebar-collapsed={quay.sidebarCollapsed}>
 	<Topbar />

@@ -1,0 +1,75 @@
+# Maintainer: Your Name <you@example.com>
+#
+# ARCHITECTURE.md §11: an AUR PKGBUILD declaring nodejs/npm as dependencies,
+# rather than a bundled single-executable binary — Node's SEA tooling doesn't
+# bundle npm modules and doesn't cross-compile, neither of which fits here,
+# whereas an AUR package fits the workflow already in use for this machine's
+# other tooling.
+#
+# Update `url`/`source` below to your actual repository once this project
+# has a real remote and tagged releases.
+
+pkgname=quay
+pkgver=0.1.0
+pkgrel=1
+pkgdesc="A local-first Git + GitHub desktop-in-browser command center"
+arch=('x86_64' 'aarch64')
+url="https://github.com/YOUR_USERNAME/quay"
+license=('MIT')
+depends=('nodejs>=24' 'npm' 'git' 'github-cli')
+makedepends=('git' 'python' 'gcc' 'make')
+source=("git+${url}.git#tag=v${pkgver}")
+sha256sums=('SKIP')
+
+build() {
+	cd "$srcdir/$pkgname"
+	# Installs workspace deps and builds shared -> backend -> frontend, in
+	# that order, since backend/frontend both import shared's built output.
+	npm ci
+	npm run build
+}
+
+check() {
+	cd "$srcdir/$pkgname"
+	npm run test -w backend
+	npm run test -w frontend
+}
+
+package() {
+	local installdir="$pkgdir/usr/lib/$pkgname"
+	install -d "$installdir"
+
+	# The whole workspace tree, node_modules included — backend/server.ts
+	# resolves the frontend build via a path relative to its own dist
+	# location (backend/dist/../../frontend/build), so this layout keeps
+	# that relationship intact rather than trying to flatten it.
+	cp -r "$srcdir/$pkgname"/. "$installdir"/
+
+	# Dev-only artifacts have no place in the installed package.
+	rm -rf "$installdir"/{.git,backend/src,frontend/src,shared/src,*/node_modules/.cache}
+	find "$installdir" -name '*.test.ts' -delete
+	find "$installdir" -type d -name '__tests__' -exec rm -rf {} +
+	find "$installdir" -type d -name '.svelte-kit' -exec rm -rf {} +
+
+	install -d "$pkgdir/usr/bin"
+	install -m755 /dev/stdin "$pkgdir/usr/bin/quay" <<-'LAUNCHER'
+	#!/bin/sh
+	exec node /usr/lib/quay/backend/dist/index.js "$@"
+	LAUNCHER
+
+	if [ -f "$srcdir/$pkgname/LICENSE" ]; then
+		install -Dm644 "$srcdir/$pkgname/LICENSE" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+	fi
+}
+
+# --- Local build variant, for testing before a tagged release exists ---
+# Replace the `source`/`sha256sums`/`pkgver` lines above with:
+#
+#   pkgver() { echo "0.1.0" ; }
+#   source=()
+#   sha256sums=()
+#
+# and run `makepkg` from a checkout with this PKGBUILD copied alongside the
+# repo root (so `$srcdir/$pkgname` still resolves) — or simplest of all,
+# skip packaging during development and just run `npm run dev:backend` /
+# `npm run dev:frontend` from the repo root.
