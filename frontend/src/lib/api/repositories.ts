@@ -48,6 +48,39 @@ export function discardFile(id: string, path: string, untracked: boolean): Promi
 	return apiFetch(`/api/repositories/${id}/discard`, { method: "POST", body: JSON.stringify({ path, untracked }) });
 }
 
+export function stageHunk(id: string, path: string, hunkIndex: number): Promise<{ ok: true }> {
+	return apiFetch(`/api/repositories/${id}/hunks/stage`, { method: "POST", body: JSON.stringify({ path, hunkIndex }) });
+}
+
+export function unstageHunk(id: string, path: string, hunkIndex: number): Promise<{ ok: true }> {
+	return apiFetch(`/api/repositories/${id}/hunks/unstage`, { method: "POST", body: JSON.stringify({ path, hunkIndex }) });
+}
+
+export function getConflictSides(id: string, path: string): Promise<{ ours: string; theirs: string }> {
+	const query = new URLSearchParams({ path });
+	return apiFetch(`/api/repositories/${id}/conflict?${query.toString()}`);
+}
+
+export function resolveConflict(id: string, path: string, mergedContent: string): Promise<{ ok: true }> {
+	return apiFetch(`/api/repositories/${id}/conflict/resolve`, { method: "POST", body: JSON.stringify({ path, mergedContent }) });
+}
+
+export function continueMerge(id: string): Promise<{ ok: true }> {
+	return apiFetch(`/api/repositories/${id}/merge/continue`, { method: "POST" });
+}
+
+export function rebase(id: string, onto: string): Promise<{ conflicts: string[] }> {
+	return apiFetch(`/api/repositories/${id}/rebase`, { method: "POST", body: JSON.stringify({ onto }) });
+}
+
+export function continueRebase(id: string): Promise<{ ok: true }> {
+	return apiFetch(`/api/repositories/${id}/rebase/continue`, { method: "POST" });
+}
+
+export function abortRebase(id: string): Promise<{ ok: true }> {
+	return apiFetch(`/api/repositories/${id}/rebase/abort`, { method: "POST" });
+}
+
 export function commit(id: string, message: string, amend: boolean): Promise<CommitSummary | null> {
 	return apiFetch(`/api/repositories/${id}/commit`, { method: "POST", body: JSON.stringify({ message, amend }) });
 }

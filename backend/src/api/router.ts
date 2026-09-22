@@ -15,16 +15,20 @@ import {
 import { handleCreateRelease, handleListReleases } from "./releases.js";
 import { handleGetSettings, handlePutSettings } from "./settings.js";
 import {
+	handleAbortRebase,
 	handleAddRemote,
 	handleAddRepository,
 	handleCheckoutBranch,
 	handleCommit,
 	handleCommitDetail,
+	handleContinueMerge,
+	handleContinueRebase,
 	handleCreateBranch,
 	handleCreateTag,
 	handleDeleteBranch,
 	handleDiscardFile,
 	handleGetBranches,
+	handleGetConflictSides,
 	handleGetDiff,
 	handleGetHistory,
 	handleGetRemotes,
@@ -34,13 +38,17 @@ import {
 	handleListRepositories,
 	handleMergeAbort,
 	handleMergeBranch,
+	handleRebase,
 	handleRemoveRepository,
+	handleResolveConflict,
 	handleStageFiles,
+	handleStageHunk,
 	handleStashApply,
 	handleStashDrop,
 	handleStashPop,
 	handleStashSave,
 	handleUnstageFiles,
+	handleUnstageHunk,
 	handleUpdateRepository
 } from "./repositories.js";
 
@@ -81,6 +89,17 @@ const routes: Route[] = [
 
 	{ method: "POST", pattern: /^\/api\/repositories\/(?<id>[^/]+)\/merge$/, handler: handleMergeBranch },
 	{ method: "POST", pattern: /^\/api\/repositories\/(?<id>[^/]+)\/merge\/abort$/, handler: handleMergeAbort },
+	{ method: "POST", pattern: /^\/api\/repositories\/(?<id>[^/]+)\/merge\/continue$/, handler: handleContinueMerge },
+
+	{ method: "POST", pattern: /^\/api\/repositories\/(?<id>[^/]+)\/hunks\/stage$/, handler: handleStageHunk },
+	{ method: "POST", pattern: /^\/api\/repositories\/(?<id>[^/]+)\/hunks\/unstage$/, handler: handleUnstageHunk },
+
+	{ method: "GET", pattern: /^\/api\/repositories\/(?<id>[^/]+)\/conflict$/, handler: handleGetConflictSides },
+	{ method: "POST", pattern: /^\/api\/repositories\/(?<id>[^/]+)\/conflict\/resolve$/, handler: handleResolveConflict },
+
+	{ method: "POST", pattern: /^\/api\/repositories\/(?<id>[^/]+)\/rebase$/, handler: handleRebase },
+	{ method: "POST", pattern: /^\/api\/repositories\/(?<id>[^/]+)\/rebase\/continue$/, handler: handleContinueRebase },
+	{ method: "POST", pattern: /^\/api\/repositories\/(?<id>[^/]+)\/rebase\/abort$/, handler: handleAbortRebase },
 
 	{ method: "GET", pattern: /^\/api\/repositories\/(?<id>[^/]+)\/history$/, handler: handleGetHistory },
 	{ method: "GET", pattern: /^\/api\/repositories\/(?<id>[^/]+)\/commits\/(?<sha>[^/]+)$/, handler: handleCommitDetail },

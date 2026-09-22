@@ -6,6 +6,14 @@
 	let amend = $state(false);
 	let message = $state("");
 
+	let merging = $derived(quay.status?.merging ?? false);
+
+	$effect(() => {
+		if (merging && quay.mergeConflictFileSet.length === 0 && quay.status) {
+			quay.mergeConflictFileSet = quay.status.mergeConflicts;
+		}
+	});
+
 	let groups = $derived([
 		{ label: "Staged" as const, data: quay.status?.staged ?? [], discard: false },
 		{ label: "Modified" as const, data: quay.status?.modified ?? [], discard: true },
@@ -60,12 +68,39 @@
 	function lineMarker(line: DiffLine): string {
 		return line.type === "add" ? "+" : line.type === "del" ? "-" : " ";
 	}
+
+	let currentFileIsStaged = $derived(quay.flatFiles[quay.selectedFileIdx]?.group === "Staged");
+
+	async function toggleHunk(hunkIndex: number): Promise<void> {
+		await quay.toggleHunk(hunkIndex, currentFileIsStaged);
+	}
 </script>
 
 <div class="view-split active">
 	<div class="changes-side">
 		<div class="changes-files">
-			{#if quay.flatFiles.length === 0}
+			{#if merging}
+				<div class="conflict-banner">
+					<Icon name="bolt" />
+					<div>
+						<strong>{quay.mergeConflictFileSet.length} file{quay.mergeConflictFileSet.length === 1 ? "" : "s"} have conflicts.</strong>
+						{quay.resolvedConflictFiles.length} of {quay.mergeConflictFileSet.length} resolved.
+					</div>
+				</div>
+				{#each quay.mergeConflictFileSet as path (path)}
+					{@const resolved = quay.resolvedConflictFiles.includes(path)}
+					<div
+						class="conflict-file-row"
+						onclick={() => quay.openConflictModal(path)}
+						onkeydown={(e) => (e.key === "Enter" || e.key === " ") && quay.openConflictModal(path)}
+						role="button"
+						tabindex="0"
+					>
+						<span class="row g-8"><span class="status-flag status-U">U</span><span class="file-path">{path.split("/").pop()}</span></span>
+						{#if resolved}<span class="badge badge-green">Resolved</span>{:else}<span class="badge badge-red">Unresolved</span>{/if}
+					</div>
+				{/each}
+			{:else if quay.flatFiles.length === 0}
 				<div class="empty-diff" style="height:200px;">
 					<Icon name="check" class="icon-lg" />
 					<span>Working tree clean</span>
@@ -134,10 +169,11 @@
 			<label class="row g-8" style="font-size:11.5px;color:var(--text-secondary);cursor:pointer;margin-bottom:8px;">
 				<input type="checkbox" style="width:auto;" checked={amend} onchange={toggleAmend} /> Amend previous commit
 			</label>
-			<textarea placeholder="Describe what changed…" bind:value={message}></textarea>
+			<textarea placeholder={merging ? "Resolve all conflicts before committing" : "Describe what changed…"} bind:value={message} disabled={merging}
+			></textarea>
 			<div class="row g-8">
-				<button class="btn grow" onclick={() => doCommit(false)}>{amend ? "Amend commit" : "Commit"}</button>
-				<button class="btn btn-primary grow" onclick={() => doCommit(true)}>Commit &amp; push</button>
+				<button class="btn grow" disabled={merging} onclick={() => doCommit(false)}>{amend ? "Amend commit" : "Commit"}</button>
+				<button class="btn btn-primary grow" disabled={merging} onclick={() => doCommit(true)}>Commit &amp; push</button>
 			</div>
 		</div>
 	</div>
@@ -161,7 +197,7 @@
 				</div>
 			{:else if quay.diffMode === "split"}
 				{#each quay.currentDiff.hunks as hunk, hi (hi)}
-					<div class="diff-hunk"><span>{hunk.header}</span></div>
+					<div class="diff-hunk"><span>{hunk.header}</span><button class="hunk-stage-btn" onclick={() => toggleHunk(hi)}>{currentFileIsStaged ? "Unstage hunk" : "Stage hunk"}</button></div>
 					<div class="diff-split-row">
 						<div class="diff-split-col">
 							{#each hunk.lines.filter((l) => l.type !== "add") as line, li (li)}
@@ -183,7 +219,7 @@
 				{/each}
 			{:else}
 				{#each quay.currentDiff.hunks as hunk, hi (hi)}
-					<div class="diff-hunk"><span>{hunk.header}</span></div>
+					<div class="diff-hunk"><span>{hunk.header}</span><button class="hunk-stage-btn" onclick={() => toggleHunk(hi)}>{currentFileIsStaged ? "Unstage hunk" : "Stage hunk"}</button></div>
 					{#each hunk.lines as line, li (li)}
 						<div class="diff-line {lineClass(line)}">
 							<span class="diff-ln">{lineNumber(line.oldLine)}</span><span class="diff-ln">{lineNumber(line.newLine)}</span>

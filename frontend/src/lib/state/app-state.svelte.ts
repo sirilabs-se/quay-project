@@ -143,6 +143,13 @@ class QuayState {
 	notifications = $state<GitHubNotification[]>([]);
 	notifPanelOpen = $state(false);
 
+	mergeConflictFileSet = $state<string[]>([]);
+	conflictModalOpen = $state(false);
+	activeConflictFile = $state<string | null>(null);
+	conflictSides = $state<{ ours: string; theirs: string } | null>(null);
+	mergedText = $state("");
+	inRebase = $state(false);
+
 	toasts = $state<ToastMessage[]>([]);
 	consoleLines = $state<ConsoleLine[]>([]);
 	consoleExpanded = $state(false);
@@ -502,6 +509,30 @@ class QuayState {
 		}
 	}
 
+	async toggleHunk(hunkIndex: number, currentlyStaged: boolean): Promise<void> {
+		if (!this.activeRepoId) return;
+		const path = this.flatFiles[this.selectedFileIdx]?.path;
+		if (!path) return;
+		try {
+			if (currentlyStaged) {
+				await api.unstageHunk(this.activeRepoId, path, hunkIndex);
+			} else {
+				await api.stageHunk(this.activeRepoId, path, hunkIndex);
+			}
+			await this.refreshStatus();
+			// Staging a hunk can shift the file between groups (or split it
+			// across both when partially staged) — reselect by path, preferring
+			// the group being edited so the diff pane doesn't jump unexpectedly.
+			const preferredGroup = currentlyStaged ? "Modified" : "Staged";
+			const nextIdx = this.flatFiles.findIndex((f) => f.path === path && f.group === preferredGroup);
+			this.selectedFileIdx = nextIdx >= 0 ? nextIdx : this.flatFiles.findIndex((f) => f.path === path);
+			if (this.selectedFileIdx < 0) this.selectedFileIdx = 0;
+			await this.refreshDiff();
+		} catch (err) {
+			this.toast(err instanceof ApiError ? err.message : "Failed to stage hunk", "error");
+		}
+	}
+
 	async toggleStaged(file: FlatFileEntry): Promise<void> {
 		if (!this.activeRepoId) return;
 		if (file.group === "Staged") {
@@ -600,6 +631,8 @@ class QuayState {
 			if (conflicts) {
 				this.consoleLog(`git merge --no-edit ${name}`, conflicts.map((c) => `CONFLICT (content): Merge conflict in ${c}`), true);
 				this.toast(`Merge conflict — ${conflicts.length} file(s) need resolving`, "info");
+				this.mergeConflictFileSet = conflicts;
+				this.inRebase = false;
 				await this.refreshStatus();
 				return { conflicts };
 			}
@@ -612,7 +645,99 @@ class QuayState {
 		await api.abortMerge(this.activeRepoId);
 		this.consoleLog("git merge --abort", []);
 		this.toast("Merge aborted", "success");
+		this.mergeConflictFileSet = [];
+		this.conflictModalOpen = false;
 		await this.refreshStatus();
+	}
+
+	async rebaseBranch(onto: string): Promise<{ conflicts: string[] }> {
+		if (!this.activeRepoId) throw new Error("No active repository");
+		try {
+			const result = await api.rebase(this.activeRepoId, onto);
+			this.consoleLog(`git rebase ${onto}`, ["Successfully rebased and updated."]);
+			this.toast(`Rebased onto ${onto}`, "success");
+			await this.refreshStatus();
+			await this.refreshBranches();
+			return result;
+		} catch (err) {
+			const conflicts = err instanceof ApiError && Array.isArray(err.body?.conflicts) ? (err.body!.conflicts as string[]) : null;
+			if (conflicts) {
+				this.consoleLog(`git rebase ${onto}`, conflicts.map((c) => `CONFLICT (content): Merge conflict in ${c}`), true);
+				this.toast(`Rebase conflict — ${conflicts.length} file(s) need resolving`, "info");
+				this.mergeConflictFileSet = conflicts;
+				this.inRebase = true;
+				await this.refreshStatus();
+				return { conflicts };
+			}
+			throw err;
+		}
+	}
+
+	async abortRebase(): Promise<void> {
+		if (!this.activeRepoId) return;
+		await api.abortRebase(this.activeRepoId);
+		this.consoleLog("git rebase --abort", []);
+		this.toast("Rebase aborted", "success");
+		this.mergeConflictFileSet = [];
+		this.inRebase = false;
+		this.conflictModalOpen = false;
+		await this.refreshStatus();
+	}
+
+	get resolvedConflictFiles(): string[] {
+		if (!this.status) return [];
+		return this.mergeConflictFileSet.filter((f) => !this.status!.mergeConflicts.includes(f));
+	}
+
+	async openConflictModal(preferFile?: string): Promise<void> {
+		const target = preferFile ?? this.status?.mergeConflicts[0] ?? this.mergeConflictFileSet[0];
+		if (!target) return;
+		this.activeConflictFile = target;
+		this.conflictModalOpen = true;
+		await this.loadConflictSides(target);
+	}
+
+	async loadConflictSides(path: string): Promise<void> {
+		if (!this.activeRepoId) return;
+		this.conflictSides = await api.getConflictSides(this.activeRepoId, path);
+		this.mergedText = `<<<<<<< HEAD\n${this.conflictSides.ours}\n=======\n${this.conflictSides.theirs}\n>>>>>>> `;
+	}
+
+	closeConflictModal(): void {
+		this.conflictModalOpen = false;
+	}
+
+	async markConflictResolved(): Promise<void> {
+		if (!this.activeRepoId || !this.activeConflictFile) return;
+		await api.resolveConflict(this.activeRepoId, this.activeConflictFile, this.mergedText);
+		this.toast(`Marked ${this.activeConflictFile.split("/").pop()} resolved`, "success");
+		await this.refreshStatus();
+		const nextUnresolved = this.status?.mergeConflicts[0] ?? null;
+		if (nextUnresolved) {
+			this.activeConflictFile = nextUnresolved;
+			await this.loadConflictSides(nextUnresolved);
+		}
+	}
+
+	async continueMergeOrRebase(): Promise<void> {
+		if (!this.activeRepoId) return;
+		try {
+			if (this.inRebase) {
+				await api.continueRebase(this.activeRepoId);
+				this.consoleLog("git rebase --continue", []);
+				this.toast("Rebase continued", "success");
+			} else {
+				await api.continueMerge(this.activeRepoId);
+				this.consoleLog("git commit", ["Merge completed."]);
+				this.toast("Merge completed", "success");
+			}
+			this.mergeConflictFileSet = [];
+			this.inRebase = false;
+			this.conflictModalOpen = false;
+			await this.refreshStatus();
+		} catch (err) {
+			this.toast(err instanceof ApiError ? err.message : "Failed to continue", "error");
+		}
 	}
 
 	async saveStash(message: string): Promise<void> {

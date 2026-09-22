@@ -34,6 +34,17 @@
 		}
 	}
 
+	async function rebase(name: string): Promise<void> {
+		try {
+			const result = await quay.rebaseBranch(name);
+			if (result.conflicts.length > 0) {
+				await quay.setActiveView("changes");
+			}
+		} catch (err) {
+			quay.toast(err instanceof Error ? err.message : "Rebase failed", "error");
+		}
+	}
+
 	function deleteBranch(name: string): void {
 		quay.openConfirm(
 			`Delete branch '${name}'?`,
@@ -84,6 +95,7 @@
 								<div class="row g-6">
 									<button class="btn btn-sm" onclick={() => quay.checkoutBranch(b.name)}>Checkout</button>
 									<button class="btn btn-sm" onclick={() => merge(b.name)}>Merge into current</button>
+									<button class="btn btn-sm" onclick={() => rebase(b.name)}>Rebase current onto this</button>
 									<button class="icon-btn btn-sm" title="Delete branch" onclick={() => deleteBranch(b.name)}>
 										<Icon name="trash" class="icon-sm" />
 									</button>

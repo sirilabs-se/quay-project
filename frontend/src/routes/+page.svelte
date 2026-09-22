@@ -9,6 +9,7 @@
 	import FormModal from "$lib/components/modals/FormModal.svelte";
 	import ConfirmModal from "$lib/components/modals/ConfirmModal.svelte";
 	import AccountSwitchModal from "$lib/components/modals/AccountSwitchModal.svelte";
+	import ConflictEditorModal from "$lib/components/modals/ConflictEditorModal.svelte";
 	import OverviewView from "$lib/components/views/OverviewView.svelte";
 	import ChangesView from "$lib/components/views/ChangesView.svelte";
 	import BranchesView from "$lib/components/views/BranchesView.svelte";
@@ -78,5 +79,6 @@
 <FormModal />
 <ConfirmModal />
 <AccountSwitchModal />
+<ConflictEditorModal />
 <NewPullRequestModal />
 <ToastStack />

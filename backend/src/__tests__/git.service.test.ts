@@ -220,3 +220,91 @@ describe("GitService diffs", () => {
 		expect(diff.hunks.length).toBeGreaterThan(0);
 	});
 });
+
+describe("GitService hunk staging", () => {
+	it("stages only the selected hunk, leaving the other hunk unstaged", async () => {
+		const lines = Array.from({ length: 30 }, (_, i) => `line ${i + 1}`).join("\n") + "\n";
+		await writeAndCommit(repoPath, "multi.txt", lines, "Add multi.txt");
+
+		const modified = lines.replace("line 2", "line 2 CHANGED").replace("line 28", "line 28 CHANGED");
+		await writeFile(path.join(repoPath, "multi.txt"), modified);
+
+		const before = await git.getFileDiff(repoPath, "multi.txt", false);
+		expect(before.hunks.length).toBe(2);
+
+		await git.stageHunk(repoPath, "multi.txt", 0, true);
+
+		const stagedDiff = await git.getFileDiff(repoPath, "multi.txt", true);
+		expect(stagedDiff.hunks.length).toBe(1);
+		expect(stagedDiff.hunks[0].lines.some((l) => l.text.includes("line 2 CHANGED"))).toBe(true);
+
+		const unstagedDiff = await git.getFileDiff(repoPath, "multi.txt", false);
+		expect(unstagedDiff.hunks.length).toBe(1);
+		expect(unstagedDiff.hunks[0].lines.some((l) => l.text.includes("line 28 CHANGED"))).toBe(true);
+	});
+
+	it("unstages a previously staged hunk", async () => {
+		const lines = Array.from({ length: 30 }, (_, i) => `line ${i + 1}`).join("\n") + "\n";
+		await writeAndCommit(repoPath, "multi2.txt", lines, "Add multi2.txt");
+		const modified = lines.replace("line 2", "line 2 CHANGED").replace("line 28", "line 28 CHANGED");
+		await writeFile(path.join(repoPath, "multi2.txt"), modified);
+
+		await git.stageHunk(repoPath, "multi2.txt", 0, true);
+		await git.stageHunk(repoPath, "multi2.txt", 0, false);
+
+		expect((await git.getFileDiff(repoPath, "multi2.txt", true)).hunks).toEqual([]);
+		expect((await git.getFileDiff(repoPath, "multi2.txt", false)).hunks.length).toBe(2);
+	});
+});
+
+describe("GitService conflict resolution", () => {
+	it("reads both sides of a conflict and resolves it", async () => {
+		await git.createBranch(repoPath, "feature/conflict2", "main", true);
+		await writeAndCommit(repoPath, "README.md", "# Test repo\nfrom feature\n", "Change on feature");
+		await git.checkoutBranch(repoPath, "main");
+		await writeAndCommit(repoPath, "README.md", "# Test repo\nfrom main\n", "Change on main");
+
+		await expect(git.mergeBranch(repoPath, "feature/conflict2")).rejects.toThrow(MergeConflictError);
+
+		const sides = await git.getConflictSides(repoPath, "README.md");
+		expect(sides.ours).toContain("from main");
+		expect(sides.theirs).toContain("from feature");
+
+		await git.resolveConflictFile(repoPath, "README.md", "# Test repo\nresolved\n");
+		expect((await git.getStatus(repoPath)).staged.map((f) => f.path)).toEqual(["README.md"]);
+
+		await git.continueMerge(repoPath);
+		const status = await git.getStatus(repoPath);
+		expect(status.merging).toBe(false);
+		expect(status.lastCommit?.message).toMatch(/Merge branch/);
+	});
+});
+
+describe("GitService rebase", () => {
+	it("rebases cleanly when there is no conflict", async () => {
+		await git.createBranch(repoPath, "feature/rebase-clean", "main", true);
+		await writeAndCommit(repoPath, "rebase-a.txt", "a\n", "Add rebase-a.txt");
+		await git.checkoutBranch(repoPath, "main");
+		await writeAndCommit(repoPath, "rebase-b.txt", "b\n", "Add rebase-b.txt");
+		await git.checkoutBranch(repoPath, "feature/rebase-clean");
+
+		const result = await git.rebaseBranch(repoPath, "main");
+		expect(result.conflicts).toEqual([]);
+		const log = await git.getLog(repoPath);
+		expect(log.map((c) => c.message)).toContain("Add rebase-b.txt");
+	});
+
+	it("throws MergeConflictError on a conflicting rebase, and abort restores the branch", async () => {
+		await git.createBranch(repoPath, "feature/rebase-conflict", "main", true);
+		await writeAndCommit(repoPath, "README.md", "# Test repo\nfrom feature\n", "Change on feature for rebase");
+		await git.checkoutBranch(repoPath, "main");
+		await writeAndCommit(repoPath, "README.md", "# Test repo\nfrom main\n", "Change on main for rebase");
+		await git.checkoutBranch(repoPath, "feature/rebase-conflict");
+
+		await expect(git.rebaseBranch(repoPath, "main")).rejects.toThrow(MergeConflictError);
+		await git.abortRebase(repoPath);
+
+		const branches = await git.listBranches(repoPath);
+		expect(branches.find((b) => b.name === "feature/rebase-conflict")?.current).toBe(true);
+	});
+});

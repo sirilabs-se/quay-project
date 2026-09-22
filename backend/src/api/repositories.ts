@@ -439,3 +439,138 @@ export async function handleAddRemote(req: IncomingMessage, res: ServerResponse,
 		handleError(res, err);
 	}
 }
+
+/* ---------------------------------------------------------------- hunk staging */
+
+export async function handleStageHunk(req: IncomingMessage, res: ServerResponse, params: Record<string, string>): Promise<void> {
+	try {
+		const body = await readJsonBody<{ path?: string; hunkIndex?: number }>(req);
+		if (!body.path || body.hunkIndex === undefined) {
+			sendJson(res, 400, { error: "bad_request", message: "path and hunkIndex are required" });
+			return;
+		}
+		const path = repoPath(params.id);
+		await operationQueue.run(params.id, () => gitService.stageHunk(path, body.path!, body.hunkIndex!, true));
+		sendJson(res, 200, { ok: true });
+	} catch (err) {
+		handleError(res, err);
+	}
+}
+
+export async function handleUnstageHunk(
+	req: IncomingMessage,
+	res: ServerResponse,
+	params: Record<string, string>
+): Promise<void> {
+	try {
+		const body = await readJsonBody<{ path?: string; hunkIndex?: number }>(req);
+		if (!body.path || body.hunkIndex === undefined) {
+			sendJson(res, 400, { error: "bad_request", message: "path and hunkIndex are required" });
+			return;
+		}
+		const path = repoPath(params.id);
+		await operationQueue.run(params.id, () => gitService.stageHunk(path, body.path!, body.hunkIndex!, false));
+		sendJson(res, 200, { ok: true });
+	} catch (err) {
+		handleError(res, err);
+	}
+}
+
+/* ---------------------------------------------------------------- conflicts */
+
+export async function handleGetConflictSides(
+	req: IncomingMessage,
+	res: ServerResponse,
+	params: Record<string, string>
+): Promise<void> {
+	try {
+		const filePath = queryParams(req).get("path");
+		if (!filePath) {
+			sendJson(res, 400, { error: "bad_request", message: "path query parameter is required" });
+			return;
+		}
+		const path = repoPath(params.id);
+		const sides = await operationQueue.run(params.id, () => gitService.getConflictSides(path, filePath));
+		sendJson(res, 200, sides);
+	} catch (err) {
+		handleError(res, err);
+	}
+}
+
+export async function handleResolveConflict(
+	req: IncomingMessage,
+	res: ServerResponse,
+	params: Record<string, string>
+): Promise<void> {
+	try {
+		const body = await readJsonBody<{ path?: string; mergedContent?: string }>(req);
+		if (!body.path || body.mergedContent === undefined) {
+			sendJson(res, 400, { error: "bad_request", message: "path and mergedContent are required" });
+			return;
+		}
+		const path = repoPath(params.id);
+		await operationQueue.run(params.id, () => gitService.resolveConflictFile(path, body.path!, body.mergedContent!));
+		sendJson(res, 200, { ok: true });
+	} catch (err) {
+		handleError(res, err);
+	}
+}
+
+export async function handleContinueMerge(
+	_req: IncomingMessage,
+	res: ServerResponse,
+	params: Record<string, string>
+): Promise<void> {
+	try {
+		const path = repoPath(params.id);
+		await operationQueue.run(params.id, () => gitService.continueMerge(path));
+		sendJson(res, 200, { ok: true });
+	} catch (err) {
+		handleError(res, err);
+	}
+}
+
+/* ---------------------------------------------------------------- rebase */
+
+export async function handleRebase(req: IncomingMessage, res: ServerResponse, params: Record<string, string>): Promise<void> {
+	try {
+		const body = await readJsonBody<{ onto?: string }>(req);
+		if (!body.onto) {
+			sendJson(res, 400, { error: "bad_request", message: "onto is required" });
+			return;
+		}
+		const path = repoPath(params.id);
+		const result = await operationQueue.run(params.id, () => gitService.rebaseBranch(path, body.onto!));
+		sendJson(res, 200, result);
+	} catch (err) {
+		handleError(res, err);
+	}
+}
+
+export async function handleContinueRebase(
+	_req: IncomingMessage,
+	res: ServerResponse,
+	params: Record<string, string>
+): Promise<void> {
+	try {
+		const path = repoPath(params.id);
+		await operationQueue.run(params.id, () => gitService.continueRebase(path));
+		sendJson(res, 200, { ok: true });
+	} catch (err) {
+		handleError(res, err);
+	}
+}
+
+export async function handleAbortRebase(
+	_req: IncomingMessage,
+	res: ServerResponse,
+	params: Record<string, string>
+): Promise<void> {
+	try {
+		const path = repoPath(params.id);
+		await operationQueue.run(params.id, () => gitService.abortRebase(path));
+		sendJson(res, 200, { ok: true });
+	} catch (err) {
+		handleError(res, err);
+	}
+}

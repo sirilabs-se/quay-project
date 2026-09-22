@@ -1,4 +1,4 @@
-import { unlink } from "node:fs/promises";
+import { unlink, writeFile } from "node:fs/promises";
 import type {
 	Branch,
 	CommitDetail,
@@ -14,7 +14,7 @@ import type {
 import { parseFileDiff } from "./diff-parser.js";
 import { assertWithinRepo, resolveWithinRepo } from "./path-guard.js";
 import { parseStatus } from "./status-parser.js";
-import { ExecError, runProcess } from "../process/exec.js";
+import { ExecError, runProcess, runProcessWithInput } from "../process/exec.js";
 
 const US = "\x1f"; // unit separator, used between pretty-format fields
 const RS = "\x1e"; // record separator, used between commits
@@ -290,4 +290,75 @@ export class GitService {
 	async addRemote(repoPath: string, name: string, url: string): Promise<void> {
 		await git(repoPath, ["remote", "add", name, url]);
 	}
+
+	/** Stages (or unstages) a single hunk by reconstructing a minimal patch and applying it with `git apply --cached`. */
+	async stageHunk(repoPath: string, relativePath: string, hunkIndex: number, stage: boolean): Promise<void> {
+		assertWithinRepo(repoPath, relativePath);
+		// Hunk indices from the client refer to the unstaged diff when staging,
+		// and the staged (--cached) diff when unstaging a hunk already staged.
+		const diffArgs = stage ? ["diff", "--", relativePath] : ["diff", "--cached", "--", relativePath];
+		const { stdout } = await runGitTolerant(repoPath, diffArgs);
+		const patch = extractHunkPatch(relativePath, stdout, hunkIndex);
+		if (!patch) {
+			throw new Error(`Hunk ${hunkIndex} not found for ${relativePath}`);
+		}
+		const applyArgs = stage ? ["apply", "--cached", "-"] : ["apply", "--cached", "--reverse", "-"];
+		await runProcessWithInput("git", ["-C", repoPath, ...applyArgs], patch);
+	}
+
+	/** The working-tree content on each side of a conflict, read from the index stages (2 = ours, 3 = theirs). */
+	async getConflictSides(repoPath: string, relativePath: string): Promise<{ ours: string; theirs: string }> {
+		assertWithinRepo(repoPath, relativePath);
+		const [ours, theirs] = await Promise.all([
+			git(repoPath, ["show", `:2:${relativePath}`]).catch(() => ""),
+			git(repoPath, ["show", `:3:${relativePath}`]).catch(() => "")
+		]);
+		return { ours, theirs };
+	}
+
+	/** Writes the merged content and stages it, marking the conflict resolved. */
+	async resolveConflictFile(repoPath: string, relativePath: string, mergedContent: string): Promise<void> {
+		const absolute = resolveWithinRepo(repoPath, relativePath);
+		await writeFile(absolute, mergedContent, "utf-8");
+		await git(repoPath, ["add", "--", relativePath]);
+	}
+
+	async continueMerge(repoPath: string): Promise<void> {
+		await git(repoPath, ["commit", "--no-edit"]);
+	}
+
+	async rebaseBranch(repoPath: string, ontoBranch: string): Promise<{ conflicts: string[] }> {
+		const { code } = await runGitTolerant(repoPath, ["rebase", ontoBranch]);
+		if (code === 0) return { conflicts: [] };
+		const status = parseStatus(await git(repoPath, ["status", "--porcelain=v2", "--branch"]));
+		if (status.conflicted.length > 0) {
+			throw new MergeConflictError(status.conflicted);
+		}
+		return { conflicts: [] };
+	}
+
+	async continueRebase(repoPath: string): Promise<void> {
+		await git(repoPath, ["-c", "core.editor=true", "rebase", "--continue"]);
+	}
+
+	async abortRebase(repoPath: string): Promise<void> {
+		await git(repoPath, ["rebase", "--abort"]);
+	}
+}
+
+/** Reconstructs a standalone, applyable patch for one hunk from a full `git diff` file output. */
+export function extractHunkPatch(relativePath: string, fullDiffOutput: string, hunkIndex: number): string | null {
+	const lines = fullDiffOutput.split("\n");
+	const hunkStarts: number[] = [];
+	lines.forEach((line, i) => {
+		if (line.startsWith("@@ ")) hunkStarts.push(i);
+	});
+	if (hunkIndex < 0 || hunkIndex >= hunkStarts.length) return null;
+
+	const start = hunkStarts[hunkIndex];
+	const end = hunkIndex + 1 < hunkStarts.length ? hunkStarts[hunkIndex + 1] : lines.length;
+	const hunkLines = lines.slice(start, end).filter((l) => l.length > 0 || l === "");
+
+	const header = [`diff --git a/${relativePath} b/${relativePath}`, `--- a/${relativePath}`, `+++ b/${relativePath}`];
+	return [...header, ...hunkLines].join("\n") + "\n";
 }
