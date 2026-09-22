@@ -6,6 +6,8 @@ import { SESSION_TOKEN_WINDOW_KEY } from "shared";
 import { routeApiRequest } from "./api/router.js";
 import { sendJson } from "./api/respond.js";
 import { isApiRequestAuthorized, isHostAllowed, type AuthConfig } from "./middleware/auth.js";
+import { handleEventsUpgrade } from "./ws/events.js";
+import { handleRepositoryActionUpgrade } from "./ws/repository-actions.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const FRONTEND_BUILD_DIR = path.resolve(__dirname, "../../frontend/build");
@@ -23,7 +25,7 @@ const CONTENT_TYPES: Record<string, string> = {
 };
 
 export function createQuayServer(config: AuthConfig): Server {
-	return createServer((req, res) => {
+	const server = createServer((req, res) => {
 		handleRequest(req, res, config).catch((err: unknown) => {
 			console.error("Unhandled request error:", err);
 			if (!res.headersSent) {
@@ -31,6 +33,13 @@ export function createQuayServer(config: AuthConfig): Server {
 			}
 		});
 	});
+
+	server.on("upgrade", (req, socket, head) => {
+		const handled = handleRepositoryActionUpgrade(req, socket, head, config) || handleEventsUpgrade(req, socket, head, config);
+		if (!handled) socket.destroy();
+	});
+
+	return server;
 }
 
 async function handleRequest(req: IncomingMessage, res: ServerResponse, config: AuthConfig): Promise<void> {

@@ -12,10 +12,15 @@
 		"check": "tsc -p tsconfig.json --noEmit"
 	},
 	"dependencies": {
-		"shared": "*"
+		"shared": "*",
+		"better-sqlite3": "^13.0.3",
+		"chokidar": "^5.0.0",
+		"ws": "^8.21.3"
 	},
 	"devDependencies": {
+		"@types/better-sqlite3": "^9.6.0",
 		"@types/node": "^26.6.2",
+		"@types/ws": "^8.18.1",
 		"tsx": "^4.23.15",
 		"typescript": "^6.0.3",
 		"vitest": "^4.1.8"

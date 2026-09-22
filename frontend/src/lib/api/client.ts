@@ -14,7 +14,8 @@ export function getSessionToken(): string | null {
 export class ApiError extends Error {
 	constructor(
 		message: string,
-		public readonly status: number
+		public readonly status: number,
+		public readonly body: Record<string, unknown> | null = null
 	) {
 		super(message);
 		this.name = "ApiError";
@@ -33,7 +34,9 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
 
 	const response = await fetch(path, { ...init, headers });
 	if (!response.ok) {
-		throw new ApiError(`Request to ${path} failed with ${response.status}`, response.status);
+		const body = await response.json().catch(() => null);
+		const message = typeof body?.message === "string" ? body.message : `Request to ${path} failed with ${response.status}`;
+		throw new ApiError(message, response.status, body);
 	}
 	return (await response.json()) as T;
 }

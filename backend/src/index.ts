@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
-import { createQuayServer } from "./server.js";
+import { repositoryService, repoWatcher } from "./api/context.js";
 import type { AuthConfig } from "./middleware/auth.js";
+import { createQuayServer } from "./server.js";
 
 const PORT = Number(process.env.QUAY_PORT ?? 4317);
 const HOST = "127.0.0.1";
@@ -14,6 +15,10 @@ const config: AuthConfig = {
 };
 
 const server = createQuayServer(config);
+
+for (const repo of repositoryService.list()) {
+	repoWatcher.watchRepo(repo.id, repo.path);
+}
 
 server.listen(PORT, HOST, () => {
 	console.log(`Quay backend listening on http://${HOST}:${PORT}`);
