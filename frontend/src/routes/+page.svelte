@@ -17,10 +17,11 @@
 	import TagsView from "$lib/components/views/TagsView.svelte";
 	import RemotesView from "$lib/components/views/RemotesView.svelte";
 	import SettingsView from "$lib/components/views/SettingsView.svelte";
-	import PlaceholderView from "$lib/components/views/PlaceholderView.svelte";
 	import PullRequestsView from "$lib/components/views/PullRequestsView.svelte";
 	import PullRequestDetailView from "$lib/components/views/PullRequestDetailView.svelte";
 	import IssuesView from "$lib/components/views/IssuesView.svelte";
+	import ActionsView from "$lib/components/views/ActionsView.svelte";
+	import ReleasesView from "$lib/components/views/ReleasesView.svelte";
 	import NewPullRequestModal from "$lib/components/modals/NewPullRequestModal.svelte";
 	import { quay } from "$lib/state/app-state.svelte";
 
@@ -64,9 +65,9 @@
 			{:else if quay.activeView === "issues"}
 				<IssuesView />
 			{:else if quay.activeView === "actions"}
-				<PlaceholderView title="No workflow runs here" subtitle="GitHub Actions support is coming in a later phase." />
+				<ActionsView />
 			{:else if quay.activeView === "releases"}
-				<PlaceholderView title="No releases here" subtitle="GitHub release support is coming in a later phase." />
+				<ReleasesView />
 			{/if}
 		</div>
 		<ConsoleDock />

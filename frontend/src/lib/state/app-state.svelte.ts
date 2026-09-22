@@ -5,17 +5,20 @@ import type {
 	DetectionResponse,
 	FileDiff,
 	GitHubAccount,
+	GitHubNotification,
 	IssueSummary,
 	Label,
 	PullRequestDetail,
 	PullRequestSummary,
+	Release,
 	Remote,
 	Repository,
 	RepositoryAccountInfo,
 	RepositoryStatus,
 	Settings,
 	Stash,
-	Tag
+	Tag,
+	WorkflowRun
 } from "shared";
 import * as api from "$lib/api/repositories";
 import { ApiError, apiFetch } from "$lib/api/client";
@@ -24,6 +27,7 @@ import * as prApi from "$lib/api/pull-requests";
 import type { PullRequestStateFilter } from "$lib/api/pull-requests";
 import * as issueApi from "$lib/api/issues";
 import type { IssueStateFilter } from "$lib/api/issues";
+import * as actionsApi from "$lib/api/actions";
 import { connectEvents, connectRepositoryAction } from "$lib/api/ws";
 
 export type ViewName =
@@ -130,6 +134,15 @@ class QuayState {
 	issueFilter = $state<IssueStateFilter>("open");
 	issueLoadError = $state<string | null>(null);
 
+	workflowRuns = $state<WorkflowRun[]>([]);
+	actionsLoadError = $state<string | null>(null);
+
+	releases = $state<Release[]>([]);
+	releasesLoadError = $state<string | null>(null);
+
+	notifications = $state<GitHubNotification[]>([]);
+	notifPanelOpen = $state(false);
+
 	toasts = $state<ToastMessage[]>([]);
 	consoleLines = $state<ConsoleLine[]>([]);
 	consoleExpanded = $state(false);
@@ -171,6 +184,7 @@ class QuayState {
 
 	async init(): Promise<void> {
 		await Promise.all([this.loadDetection(), this.loadSettings(), this.loadAccounts(), this.loadRepositories()]);
+		void this.loadNotifications();
 		connectEvents((repoId) => {
 			if (repoId === this.activeRepoId) {
 				void this.refreshActiveView();
@@ -286,6 +300,12 @@ class QuayState {
 				break;
 			case "issues":
 				await this.refreshIssues();
+				break;
+			case "actions":
+				await this.refreshWorkflowRuns();
+				break;
+			case "releases":
+				await this.refreshReleases();
 				break;
 			default:
 				await this.refreshStatus(id);
@@ -662,6 +682,99 @@ class QuayState {
 
 	toggleSidebar(): void {
 		this.sidebarCollapsed = !this.sidebarCollapsed;
+	}
+
+	async refreshWorkflowRuns(): Promise<void> {
+		if (!this.activeRepoId) return;
+		this.actionsLoadError = null;
+		try {
+			this.workflowRuns = await actionsApi.listRuns(this.activeRepoId);
+		} catch (err) {
+			this.actionsLoadError = err instanceof ApiError ? err.message : "Failed to load workflow runs";
+			this.workflowRuns = [];
+		}
+	}
+
+	async rerunWorkflow(runId: number): Promise<void> {
+		if (!this.activeRepoId) return;
+		try {
+			await actionsApi.rerunWorkflow(this.activeRepoId, runId);
+			this.toast("Re-run triggered", "info");
+			await this.refreshWorkflowRuns();
+		} catch (err) {
+			this.toast(err instanceof ApiError ? err.message : "Failed to re-run workflow", "error");
+		}
+	}
+
+	async refreshReleases(): Promise<void> {
+		if (!this.activeRepoId) return;
+		this.releasesLoadError = null;
+		try {
+			this.releases = await actionsApi.listReleases(this.activeRepoId);
+		} catch (err) {
+			this.releasesLoadError = err instanceof ApiError ? err.message : "Failed to load releases";
+			this.releases = [];
+		}
+	}
+
+	openDraftReleaseModal(): void {
+		this.openFormModal({
+			title: "Draft a release",
+			fields: [
+				{ key: "tag", label: "Tag", type: "text", value: "" },
+				{ key: "title", label: "Title", type: "text", value: "" },
+				{ key: "notes", label: "Release notes", type: "textarea", value: "" },
+				{ key: "prerelease", label: "Mark as pre-release", type: "checkbox", value: false }
+			],
+			submitLabel: "Save draft",
+			onSubmit: async (values) => {
+				const tag = String(values.tag ?? "").trim();
+				const title = String(values.title ?? "").trim();
+				if (!tag || !title) {
+					this.toast("Tag and title are required", "info");
+					return;
+				}
+				if (!this.activeRepoId) return;
+				try {
+					await actionsApi.createRelease(this.activeRepoId, {
+						tag,
+						title,
+						notes: String(values.notes ?? ""),
+						prerelease: Boolean(values.prerelease)
+					});
+					this.toast(`Drafted release ${title}`, "success");
+					await this.refreshReleases();
+				} catch (err) {
+					this.toast(err instanceof ApiError ? err.message : "Failed to draft release", "error");
+				}
+			}
+		});
+	}
+
+	async loadNotifications(): Promise<void> {
+		try {
+			this.notifications = await actionsApi.listNotifications();
+		} catch {
+			this.notifications = [];
+		}
+	}
+
+	toggleNotifPanel(): void {
+		this.notifPanelOpen = !this.notifPanelOpen;
+		if (this.notifPanelOpen) void this.loadNotifications();
+	}
+
+	closeNotifPanel(): void {
+		this.notifPanelOpen = false;
+	}
+
+	async markAllNotificationsRead(): Promise<void> {
+		try {
+			await actionsApi.markNotificationsRead();
+			this.notifications = this.notifications.map((n) => ({ ...n, unread: false }));
+		} catch (err) {
+			this.toast(err instanceof ApiError ? err.message : "Failed to mark notifications read", "error");
+		}
 	}
 }
 

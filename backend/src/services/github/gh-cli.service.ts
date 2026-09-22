@@ -22,6 +22,14 @@ export async function runGhAsAccount(repoPath: string, account: GitHubAccount, a
 	});
 }
 
+/** Same as runGhAsAccount but for account-level calls (notifications, user info) that aren't scoped to a repo. */
+export async function runGhAsAccountGlobal(account: GitHubAccount, args: readonly string[]): Promise<ExecResult> {
+	const token = await resolveToken(account);
+	return runProcess("gh", args, {
+		env: { ...process.env, GH_TOKEN: token, GH_HOST: account.host }
+	});
+}
+
 /** `owner/repo` for the repo at `repoPath`, as gh resolves it from the git remote. */
 export async function getRepoNameWithOwner(repoPath: string, account: GitHubAccount): Promise<string> {
 	const { stdout } = await runGhAsAccount(repoPath, account, ["repo", "view", "--json", "nameWithOwner", "-q", ".nameWithOwner"]);

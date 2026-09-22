@@ -1,7 +1,9 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
+import { handleListRuns, handleRerun } from "./actions.js";
 import { handleDetection } from "./detection.js";
 import { handleListAccounts, handleRepositoryAccount, handleSwitchAccount } from "./github.js";
 import { handleCreateIssue, handleListIssues } from "./issues.js";
+import { handleListNotifications, handleMarkNotificationsRead } from "./notifications.js";
 import {
 	handleClosePullRequest,
 	handleCreatePullRequest,
@@ -10,6 +12,7 @@ import {
 	handleMergePullRequest,
 	handlePullRequestMeta
 } from "./pull-requests.js";
+import { handleCreateRelease, handleListReleases } from "./releases.js";
 import { handleGetSettings, handlePutSettings } from "./settings.js";
 import {
 	handleAddRemote,
@@ -102,7 +105,16 @@ const routes: Route[] = [
 	{ method: "POST", pattern: /^\/api\/repositories\/(?<id>[^/]+)\/pulls\/(?<number>\d+)\/close$/, handler: handleClosePullRequest },
 
 	{ method: "GET", pattern: /^\/api\/repositories\/(?<id>[^/]+)\/issues$/, handler: handleListIssues },
-	{ method: "POST", pattern: /^\/api\/repositories\/(?<id>[^/]+)\/issues$/, handler: handleCreateIssue }
+	{ method: "POST", pattern: /^\/api\/repositories\/(?<id>[^/]+)\/issues$/, handler: handleCreateIssue },
+
+	{ method: "GET", pattern: /^\/api\/repositories\/(?<id>[^/]+)\/actions$/, handler: handleListRuns },
+	{ method: "POST", pattern: /^\/api\/repositories\/(?<id>[^/]+)\/actions\/(?<runId>\d+)\/rerun$/, handler: handleRerun },
+
+	{ method: "GET", pattern: /^\/api\/repositories\/(?<id>[^/]+)\/releases$/, handler: handleListReleases },
+	{ method: "POST", pattern: /^\/api\/repositories\/(?<id>[^/]+)\/releases$/, handler: handleCreateRelease },
+
+	{ method: "GET", pattern: /^\/api\/notifications$/, handler: handleListNotifications },
+	{ method: "POST", pattern: /^\/api\/notifications\/mark-read$/, handler: handleMarkNotificationsRead }
 ];
 
 /** Returns true if a route matched (and handled the response), false otherwise. */
