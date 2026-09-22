@@ -1,0 +1,23 @@
+{
+	"name": "backend",
+	"private": true,
+	"version": "0.0.1",
+	"type": "module",
+	"main": "./dist/index.js",
+	"scripts": {
+		"dev": "tsx watch src/index.ts",
+		"build": "tsc -p tsconfig.json",
+		"start": "node dist/index.js",
+		"test": "vitest run",
+		"check": "tsc -p tsconfig.json --noEmit"
+	},
+	"dependencies": {
+		"shared": "*"
+	},
+	"devDependencies": {
+		"@types/node": "^26.6.2",
+		"tsx": "^4.23.15",
+		"typescript": "^6.0.3",
+		"vitest": "^4.1.8"
+	}
+}

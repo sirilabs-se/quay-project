@@ -1,0 +1,2524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quay — a local command center for Git &amp; GitHub</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg-canvas:#12151a;
+    --bg-surface:#181c23;
+    --bg-surface-2:#1f242d;
+    --bg-surface-3:#262c37;
+    --border:#2b313d;
+    --border-subtle:#20252e;
+    --text-primary:#e7eaf0;
+    --text-secondary:#9aa3b4;
+    --text-muted:#5c6472;
+
+    --accent:#e2851e;
+    --accent-strong:#f5a339;
+    --accent-soft:rgba(226,133,30,.14);
+
+    --green:#4cc38a;      --green-soft:rgba(76,195,138,.12);
+    --red:#e5636b;        --red-soft:rgba(229,99,107,.12);
+    --amber:#e0a030;      --amber-soft:rgba(224,160,48,.12);
+    --violet:#8d7fe0;     --violet-soft:rgba(141,127,224,.14);
+    --teal:#3fb6ae;       --teal-soft:rgba(63,182,174,.14);
+
+    --radius-sm:4px;
+    --radius-md:6px;
+    --font-sans:'IBM Plex Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    --font-mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+
+    --sidebar-w:250px;
+    --sidebar-w-collapsed:56px;
+    --topbar-h:52px;
+    --subnav-h:42px;
+    --console-h:230px;
+    --console-h-collapsed:34px;
+  }
+
+  *,*::before,*::after{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background:var(--bg-canvas);
+    color:var(--text-primary);
+    font-family:var(--font-sans);
+    font-size:13.5px;
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+    overflow:hidden;
+  }
+  ::selection{background:var(--accent-soft);color:var(--text-primary);}
+  a{color:inherit;}
+  button{font-family:inherit;font-size:inherit;color:inherit;}
+  input,textarea,select{font-family:inherit;font-size:inherit;color:inherit;}
+  svg{display:block;flex-shrink:0;}
+
+  ::-webkit-scrollbar{width:10px;height:10px;}
+  ::-webkit-scrollbar-track{background:transparent;}
+  ::-webkit-scrollbar-thumb{background:var(--bg-surface-3);border-radius:6px;border:2px solid var(--bg-canvas);}
+  ::-webkit-scrollbar-thumb:hover{background:#323a47;}
+
+  :focus-visible{outline:2px solid var(--accent-strong);outline-offset:1px;border-radius:3px;}
+
+  @media (prefers-reduced-motion:reduce){
+    *{animation-duration:.001ms !important;transition-duration:.001ms !important;}
+  }
+
+  .mono{font-family:var(--font-mono);}
+  .muted{color:var(--text-secondary);}
+  .mutedmore{color:var(--text-muted);}
+  .row{display:flex;align-items:center;}
+  .col{display:flex;flex-direction:column;}
+  .between{justify-content:space-between;}
+  .g-4{gap:4px;} .g-6{gap:6px;} .g-8{gap:8px;} .g-10{gap:10px;} .g-14{gap:14px;} .g-20{gap:20px;}
+  .grow{flex:1;min-width:0;}
+  .wrap{flex-wrap:wrap;}
+  .truncate{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+  .icon{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;}
+  .icon-sm{width:13px;height:13px;}
+  .icon-lg{width:18px;height:18px;}
+
+  /* ---------- buttons / inputs / chips ---------- */
+  .btn{
+    display:inline-flex;align-items:center;gap:6px;
+    padding:6px 11px;border-radius:var(--radius-sm);
+    background:var(--bg-surface-2);border:1px solid var(--border);
+    color:var(--text-primary);cursor:pointer;font-weight:500;
+    transition:background .12s ease,border-color .12s ease;
+    white-space:nowrap;
+  }
+  .btn:hover{background:var(--bg-surface-3);}
+  .btn:active{transform:translateY(0.5px);}
+  .btn-primary{background:var(--accent);border-color:var(--accent);color:#1b1204;font-weight:600;}
+  .btn-primary:hover{background:var(--accent-strong);border-color:var(--accent-strong);}
+  .btn-danger{background:transparent;border-color:var(--red);color:var(--red);}
+  .btn-danger:hover{background:var(--red-soft);}
+  .btn-ghost{background:transparent;border-color:transparent;}
+  .btn-ghost:hover{background:var(--bg-surface-2);}
+  .btn-sm{padding:4px 9px;font-size:12px;}
+  .btn:disabled{opacity:.4;cursor:not-allowed;}
+  .icon-btn{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:28px;height:28px;border-radius:var(--radius-sm);
+    background:transparent;border:1px solid transparent;cursor:pointer;color:var(--text-secondary);
+  }
+  .icon-btn:hover{background:var(--bg-surface-2);color:var(--text-primary);}
+  .icon-btn.on{color:var(--accent-strong);background:var(--accent-soft);}
+
+  input[type=text],input[type=search],textarea{
+    background:var(--bg-surface);border:1px solid var(--border);
+    border-radius:var(--radius-sm);color:var(--text-primary);
+    padding:7px 10px;width:100%;
+  }
+  input[type=text]:focus,input[type=search]:focus,textarea:focus{
+    outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);
+  }
+  ::placeholder{color:var(--text-muted);}
+
+  .chip{
+    display:inline-flex;align-items:center;gap:5px;
+    padding:2px 8px;border-radius:99px;font-size:11.5px;font-weight:600;
+    background:var(--bg-surface-3);color:var(--text-secondary);border:1px solid var(--border);
+  }
+  .dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+  .dot-accent{background:var(--accent-strong);} .dot-violet{background:var(--violet);}
+  .dot-teal{background:var(--teal);} .dot-green{background:var(--green);}
+  .dot-red{background:var(--red);} .dot-amber{background:var(--amber);}
+
+  .badge{
+    display:inline-flex;align-items:center;gap:4px;
+    padding:2px 7px;border-radius:4px;font-size:11px;font-weight:600;
+  }
+  .badge-green{background:var(--green-soft);color:var(--green);}
+  .badge-red{background:var(--red-soft);color:var(--red);}
+  .badge-amber{background:var(--amber-soft);color:var(--amber);}
+  .badge-violet{background:var(--violet-soft);color:var(--violet);}
+  .badge-teal{background:var(--teal-soft);color:var(--teal);}
+  .badge-accent{background:var(--accent-soft);color:var(--accent-strong);}
+  .badge-muted{background:var(--bg-surface-3);color:var(--text-secondary);}
+
+  hr,.divider{border:none;border-top:1px solid var(--border-subtle);margin:10px 0;}
+
+  /* ---------- shell layout ---------- */
+  .shell{
+    display:grid;
+    grid-template-columns:var(--sidebar-w) 1fr;
+    grid-template-rows:var(--topbar-h) 1fr;
+    height:100vh;
+    transition:grid-template-columns .15s ease;
+  }
+  .shell.sidebar-collapsed{grid-template-columns:var(--sidebar-w-collapsed) 1fr;}
+
+  /* ---- topbar ---- */
+  .topbar{
+    grid-column:1 / 3;grid-row:1;
+    display:flex;align-items:center;gap:14px;
+    padding:0 12px;background:var(--bg-surface);border-bottom:1px solid var(--border);
+    position:relative;
+  }
+  .brand{display:flex;align-items:center;gap:8px;font-weight:700;font-size:14.5px;letter-spacing:.2px;padding-right:6px;}
+  .brand-mark{width:20px;height:16px;display:flex;flex-direction:column;gap:2px;justify-content:flex-end;}
+  .brand-mark span{display:block;height:3px;border-radius:1px;background:var(--accent-strong);}
+  .brand-mark span:nth-child(1){width:100%;}
+  .brand-mark span:nth-child(2){width:70%;}
+  .brand-mark span:nth-child(3){width:42%;}
+  .topbar-repo{font-weight:600;font-size:13.5px;}
+  .topbar-sep{color:var(--text-muted);}
+  .branch-pill{
+    display:inline-flex;align-items:center;gap:6px;padding:4px 9px;
+    background:var(--bg-surface-2);border:1px solid var(--border);border-radius:99px;
+    font-family:var(--font-mono);font-size:12px;cursor:pointer;
+  }
+  .branch-pill:hover{border-color:#3a4250;}
+  .account-badge{
+    display:inline-flex;align-items:center;gap:7px;padding:4px 10px 4px 6px;
+    border-radius:99px;border:1px solid var(--border);background:var(--bg-surface-2);
+    cursor:pointer;font-size:12.5px;font-weight:600;
+  }
+  .account-badge:hover{border-color:#3a4250;}
+  .account-avatar{width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#12151a;}
+
+  /* ---- sidebar ---- */
+  .sidebar{
+    grid-column:1;grid-row:2;
+    background:var(--bg-surface);border-right:1px solid var(--border);
+    display:flex;flex-direction:column;overflow:hidden;
+  }
+  .sidebar-head{padding:10px 12px 6px;}
+  .sidebar-search{position:relative;}
+  .sidebar-search .icon{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--text-muted);}
+  .sidebar-search input{padding-left:29px;font-size:12.5px;}
+  .sidebar-scroll{flex:1;overflow-y:auto;padding:4px 8px 10px;}
+  .sidebar-section-label{
+    padding:12px 6px 5px;font-size:11.5px;font-weight:600;color:var(--text-muted);
+    display:flex;align-items:center;justify-content:space-between;
+  }
+  .repo-row,.account-row{
+    display:flex;align-items:center;gap:8px;padding:6px 7px;border-radius:var(--radius-sm);
+    cursor:pointer;color:var(--text-secondary);
+  }
+  .repo-row:hover,.account-row:hover{background:var(--bg-surface-2);}
+  .repo-row.active{background:var(--accent-soft);color:var(--text-primary);}
+  .repo-row.active .repo-star{color:var(--accent-strong);}
+  .repo-star{color:var(--text-muted);flex-shrink:0;}
+  .repo-star.filled{color:var(--accent-strong);}
+  .repo-meta{min-width:0;}
+  .repo-name{font-size:12.8px;font-weight:600;color:var(--text-primary);}
+  .repo-path{font-size:11px;color:var(--text-muted);font-family:var(--font-mono);}
+  .repo-flags{margin-left:auto;display:flex;gap:5px;font-family:var(--font-mono);font-size:10.5px;flex-shrink:0;}
+  .account-row.active-account{background:var(--bg-surface-2);}
+  .account-name{font-size:12.5px;font-weight:600;color:var(--text-primary);}
+  .account-handle{font-size:11px;color:var(--text-muted);font-family:var(--font-mono);}
+  .sidebar-collapsed .repo-meta,.sidebar-collapsed .account-name,.sidebar-collapsed .account-handle,
+  .sidebar-collapsed .repo-flags,.sidebar-collapsed .sidebar-section-label span:first-child,
+  .sidebar-collapsed .sidebar-head{display:none;}
+  .sidebar-collapsed .sidebar-scroll{padding-top:10px;}
+
+  .sidebar-foot{border-top:1px solid var(--border-subtle);padding:8px;}
+
+  /* ---- main column ---- */
+  .main-col{grid-column:2;grid-row:2;display:flex;flex-direction:column;min-width:0;overflow:hidden;}
+
+  .subnav{
+    height:var(--subnav-h);display:flex;align-items:center;gap:2px;
+    padding:0 14px;border-bottom:1px solid var(--border);background:var(--bg-canvas);
+    overflow-x:auto;flex-shrink:0;
+  }
+  .subnav-group{display:flex;align-items:center;gap:2px;}
+  .subnav-divider{width:1px;height:18px;background:var(--border);margin:0 8px;flex-shrink:0;}
+  .subnav-tab{
+    padding:6px 10px;border-radius:var(--radius-sm);color:var(--text-secondary);
+    cursor:pointer;font-size:12.8px;font-weight:500;white-space:nowrap;
+  }
+  .subnav-tab:hover{color:var(--text-primary);background:var(--bg-surface-2);}
+  .subnav-tab.active{color:var(--text-primary);background:var(--bg-surface-2);}
+  .subnav-tab .count{color:var(--text-muted);margin-left:5px;font-size:11px;}
+
+  .view-scroll{flex:1;overflow-y:auto;}
+  .view{display:none;padding:18px 22px 28px;max-width:1180px;}
+  .view.active{display:block;}
+  .view-split{display:none;}
+  .view-split.active{display:flex;height:100%;}
+
+  .panel{background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius-md);}
+  .panel-pad{padding:14px 16px;}
+  .section-title{font-size:14px;font-weight:600;margin:0 0 10px;}
+  .stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+  .stat-box{background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:12px 14px;}
+  .stat-label{font-size:11.5px;color:var(--text-muted);margin-bottom:5px;}
+  .stat-value{font-size:19px;font-weight:700;font-family:var(--font-mono);}
+
+  .warn-banner{
+    display:flex;gap:10px;align-items:flex-start;padding:11px 13px;border-radius:var(--radius-md);
+    background:var(--amber-soft);border:1px solid rgba(224,160,48,.35);color:var(--text-primary);
+    font-size:12.8px;margin-bottom:16px;
+  }
+  .warn-banner .icon{color:var(--amber);margin-top:1px;}
+
+  .commit-line{display:flex;gap:10px;align-items:flex-start;padding:10px 0;}
+  .commit-sha{font-family:var(--font-mono);font-size:11.5px;color:var(--text-muted);background:var(--bg-surface-2);padding:1px 6px;border-radius:3px;}
+
+  /* ---- file lists / changes ---- */
+  .changes-layout{display:flex;height:100%;width:100%;}
+  .changes-side{width:300px;flex-shrink:0;border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
+  .changes-files{flex:1;overflow-y:auto;padding:8px;}
+  .file-group-label{padding:9px 8px 5px;font-size:11px;font-weight:700;color:var(--text-muted);display:flex;justify-content:space-between;}
+  .file-row{
+    display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:var(--radius-sm);cursor:pointer;
+  }
+  .file-row:hover{background:var(--bg-surface-2);}
+  .file-row.selected{background:var(--accent-soft);}
+  .status-flag{
+    width:16px;height:16px;border-radius:3px;display:flex;align-items:center;justify-content:center;
+    font-family:var(--font-mono);font-size:10px;font-weight:700;flex-shrink:0;
+  }
+  .status-M{background:var(--amber-soft);color:var(--amber);}
+  .status-A{background:var(--green-soft);color:var(--green);}
+  .status-D{background:var(--red-soft);color:var(--red);}
+  .status-Q{background:var(--violet-soft);color:var(--violet);}
+  .status-U{background:var(--red-soft);color:var(--red);}
+  .file-path{font-size:12px;font-family:var(--font-mono);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .checkbox{
+    width:15px;height:15px;border-radius:3px;border:1.5px solid var(--border);flex-shrink:0;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;color:transparent;
+  }
+  .checkbox.checked{background:var(--accent);border-color:var(--accent);color:#1b1204;}
+  .file-row-actions{margin-left:auto;display:flex;gap:2px;opacity:0;flex-shrink:0;}
+  .file-row:hover .file-row-actions{opacity:1;}
+
+  .commit-box{border-top:1px solid var(--border);padding:12px;}
+  .commit-identity{font-size:11px;color:var(--text-muted);margin-bottom:8px;min-height:14px;}
+  .commit-box textarea{height:64px;resize:vertical;font-size:12.5px;margin-bottom:8px;}
+
+  .diff-pane{flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden;}
+  .diff-toolbar{display:flex;align-items:center;justify-content:space-between;padding:9px 14px;border-bottom:1px solid var(--border);gap:12px;}
+  .diff-file-title{font-family:var(--font-mono);font-size:12.5px;}
+  .hunk-progress{font-size:11px;color:var(--text-muted);white-space:nowrap;}
+  .segmented{display:flex;background:var(--bg-surface-2);border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;flex-shrink:0;}
+  .segmented button{padding:4px 10px;background:transparent;border:none;cursor:pointer;color:var(--text-secondary);font-size:11.5px;}
+  .segmented button.active{background:var(--bg-surface-3);color:var(--text-primary);}
+  .diff-body{flex:1;overflow:auto;font-family:var(--font-mono);font-size:12.3px;}
+  .diff-line{display:flex;}
+  .diff-ln{width:42px;flex-shrink:0;text-align:right;padding:0 8px;color:var(--text-muted);user-select:none;}
+  .diff-content{flex:1;white-space:pre;padding:0 12px 0 4px;}
+  .diff-add{background:rgba(76,195,138,.09);}
+  .diff-add .diff-content{color:#bfe8d3;}
+  .diff-add .diff-ln{background:rgba(76,195,138,.13);}
+  .diff-del{background:rgba(229,99,107,.09);}
+  .diff-del .diff-content{color:#f3c3c6;}
+  .diff-del .diff-ln{background:rgba(229,99,107,.13);}
+  .diff-hunk{background:var(--bg-surface-2);color:var(--violet);padding:3px 12px;display:flex;align-items:center;justify-content:space-between;gap:10px;}
+  .hunk-stage-btn{
+    font-size:10.5px;padding:2px 8px;border-radius:99px;border:1px solid var(--border);
+    background:var(--bg-surface-3);color:var(--text-secondary);cursor:pointer;flex-shrink:0;
+  }
+  .hunk-stage-btn.staged{background:var(--green-soft);color:var(--green);border-color:transparent;}
+  .diff-split-row{display:flex;}
+  .diff-split-col{flex:1;min-width:0;overflow-x:auto;}
+  .diff-split-col+.diff-split-col{border-left:1px solid var(--border);}
+  .empty-diff{display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-muted);font-size:12.5px;flex-direction:column;gap:8px;}
+
+  /* ---- tables ---- */
+  table.datatable{width:100%;border-collapse:collapse;}
+  .datatable th{
+    text-align:left;font-size:11px;font-weight:600;color:var(--text-muted);
+    padding:8px 10px;border-bottom:1px solid var(--border);
+  }
+  .datatable td{padding:9px 10px;border-bottom:1px solid var(--border-subtle);font-size:12.6px;vertical-align:middle;}
+  .datatable tbody tr:hover{background:var(--bg-surface-2);}
+  .datatable tbody tr.current-row{background:var(--accent-soft);}
+
+  /* ---- history ---- */
+  .history-layout{display:flex;height:100%;width:100%;}
+  .history-list{width:390px;flex-shrink:0;border-right:1px solid var(--border);overflow-y:auto;}
+  .history-row{display:flex;gap:10px;padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border-subtle);}
+  .history-row:hover{background:var(--bg-surface-2);}
+  .history-row.selected{background:var(--accent-soft);}
+  .lane{width:12px;position:relative;flex-shrink:0;}
+  .lane::before{content:"";position:absolute;left:5px;top:0;bottom:0;width:2px;background:var(--border);}
+  .lane .node{position:absolute;left:1px;top:14px;width:10px;height:10px;border-radius:50%;border:2px solid var(--bg-canvas);}
+  .history-msg{font-size:12.6px;font-weight:500;margin-bottom:3px;}
+  .history-meta{font-size:11px;color:var(--text-muted);}
+  .history-detail{flex:1;overflow-y:auto;padding:18px 22px;}
+
+  /* ---- PR / issue lists ---- */
+  .list-toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:12px;flex-wrap:wrap;}
+  .filter-chips{display:flex;gap:6px;flex-wrap:wrap;}
+  .filter-chip{padding:5px 11px;border-radius:99px;background:var(--bg-surface-2);border:1px solid var(--border);font-size:12px;cursor:pointer;color:var(--text-secondary);}
+  .filter-chip:hover{color:var(--text-primary);}
+  .filter-chip.active{background:var(--accent-soft);color:var(--accent-strong);border-color:transparent;font-weight:600;}
+
+  .item-row{display:flex;gap:12px;align-items:flex-start;padding:12px 4px;border-bottom:1px solid var(--border-subtle);cursor:pointer;}
+  .item-row:hover{background:var(--bg-surface-2);}
+  .item-icon{margin-top:2px;flex-shrink:0;}
+  .item-title{font-size:13.2px;font-weight:600;margin-bottom:3px;}
+  .item-title .num{color:var(--text-muted);font-weight:500;}
+  .item-sub{font-size:11.5px;color:var(--text-muted);display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
+  .avatar{width:20px;height:20px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9.5px;font-weight:700;color:#12151a;}
+
+  /* ---- pr detail ---- */
+  .pr-detail-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:14px;}
+  .pr-tabs{display:flex;gap:16px;border-bottom:1px solid var(--border);margin-bottom:16px;}
+  .pr-tab{padding:8px 2px;font-size:12.8px;color:var(--text-secondary);cursor:pointer;border-bottom:2px solid transparent;}
+  .pr-tab.active{color:var(--text-primary);border-color:var(--accent);font-weight:600;}
+  .review-row{display:flex;align-items:center;gap:8px;padding:6px 0;font-size:12.5px;}
+  .merge-methods{display:flex;gap:6px;}
+  .merge-methods button{flex:1;}
+
+  .comment-box{background:var(--bg-surface-2);border:1px solid var(--border);border-radius:var(--radius-md);padding:12px;}
+
+  /* ---- chip toggle groups (reviewers / assignees / labels) ---- */
+  .chip-toggle-group{display:flex;flex-wrap:wrap;gap:6px;}
+  .chip-toggle{
+    display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:99px;
+    background:var(--bg-surface-2);border:1px solid var(--border);font-size:12px;cursor:pointer;color:var(--text-secondary);
+  }
+  .chip-toggle:hover{color:var(--text-primary);}
+  .chip-toggle.selected{background:var(--accent-soft);border-color:transparent;color:var(--accent-strong);font-weight:600;}
+
+  /* ---- conflict banner + editor ---- */
+  .conflict-banner{
+    display:flex;gap:10px;align-items:flex-start;padding:11px 13px;border-radius:var(--radius-md);
+    background:var(--red-soft);border:1px solid rgba(229,99,107,.35);color:var(--text-primary);
+    font-size:12.8px;margin-bottom:14px;
+  }
+  .conflict-banner .icon{color:var(--red);margin-top:1px;}
+  .conflict-file-row{display:flex;align-items:center;justify-content:space-between;padding:9px 10px;border-radius:var(--radius-sm);cursor:pointer;border:1px solid var(--border);margin-bottom:6px;}
+  .conflict-file-row:hover{background:var(--bg-surface-2);}
+  .conflict-pane-label{font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:5px;}
+  .conflict-pane{background:var(--bg-surface-2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 10px;font-family:var(--font-mono);font-size:12px;white-space:pre-wrap;margin-bottom:10px;}
+  .conflict-pane.ours{border-left:3px solid var(--teal);}
+  .conflict-pane.theirs{border-left:3px solid var(--violet);}
+  .conflict-merged{width:100%;height:100px;font-family:var(--font-mono);font-size:12px;resize:vertical;}
+
+  /* ---- credential status ---- */
+  .cred-row{padding:10px 0;border-bottom:1px solid var(--border-subtle);}
+  .cred-row:last-child{border-bottom:none;}
+
+  /* ---- console dock ---- */
+  .console-dock{
+    height:var(--console-h-collapsed);flex-shrink:0;border-top:1px solid var(--border);
+    background:#0f1216;display:flex;flex-direction:column;transition:height .15s ease;
+  }
+  .console-dock.expanded{height:var(--console-h);}
+  .console-head{
+    height:34px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;
+    padding:0 12px;cursor:pointer;background:var(--bg-surface);
+  }
+  .console-head-left{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;color:var(--text-secondary);}
+  .console-cwd{font-family:var(--font-mono);font-size:11px;color:var(--text-muted);}
+  .console-body{flex:1;overflow-y:auto;padding:10px 14px;font-family:var(--font-mono);font-size:12px;display:none;}
+  .console-dock.expanded .console-body{display:block;}
+  .console-line{white-space:pre-wrap;line-height:1.65;}
+  .console-prompt{color:var(--accent-strong);}
+  .console-cmd{color:var(--text-primary);}
+  .console-out{color:var(--text-secondary);}
+  .console-out-err{color:var(--red);}
+  .console-input-row{
+    display:none;align-items:center;gap:8px;padding:8px 14px;border-top:1px solid var(--border-subtle);
+    font-family:var(--font-mono);font-size:12px;flex-shrink:0;
+  }
+  .console-dock.expanded .console-input-row{display:flex;}
+  .console-input-row input{background:transparent;border:none;padding:0;}
+  .console-input-row input:focus{box-shadow:none;}
+  .caret{color:var(--accent-strong);animation:blink 1s step-end infinite;}
+  @keyframes blink{50%{opacity:0;}}
+
+  /* ---- command palette ---- */
+  .overlay{
+    position:fixed;inset:0;background:rgba(8,10,13,.6);
+    display:none;align-items:flex-start;justify-content:center;padding-top:12vh;z-index:100;
+  }
+  .overlay.open{display:flex;}
+  .palette{width:560px;max-width:92vw;background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius-md);box-shadow:0 20px 50px rgba(0,0,0,.45);overflow:hidden;}
+  .palette-input-row{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--border);}
+  .palette-input-row input{background:transparent;border:none;font-size:14px;padding:0;}
+  .palette-input-row input:focus{box-shadow:none;}
+  .palette-list{max-height:340px;overflow-y:auto;padding:6px;}
+  .palette-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:var(--radius-sm);cursor:pointer;font-size:13px;}
+  .palette-item .icon{color:var(--text-muted);}
+  .palette-item.active{background:var(--accent-soft);}
+  .palette-item.active .icon{color:var(--accent-strong);}
+  .palette-hint{margin-left:auto;font-size:10.5px;color:var(--text-muted);border:1px solid var(--border);border-radius:3px;padding:1px 5px;}
+  .palette-empty{padding:24px;text-align:center;color:var(--text-muted);font-size:12.5px;}
+
+  /* ---- notifications ---- */
+  .notif-btn{position:relative;}
+  .notif-badge{
+    position:absolute;top:2px;right:2px;min-width:14px;height:14px;padding:0 3px;
+    border-radius:99px;background:var(--red);color:#fff;font-size:9px;font-weight:700;
+    display:none;align-items:center;justify-content:center;line-height:1;
+  }
+  .notif-panel{
+    position:absolute;top:48px;right:64px;width:340px;max-height:420px;overflow-y:auto;
+    background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius-md);
+    box-shadow:0 20px 50px rgba(0,0,0,.45);display:none;z-index:90;
+  }
+  .notif-panel.open{display:block;}
+  .notif-panel-head{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-bottom:1px solid var(--border);}
+  .notif-panel-head span:first-child{font-weight:700;font-size:12.8px;}
+  .notif-mark-read{font-size:11.5px;color:var(--accent-strong);cursor:pointer;}
+  .notif-item{display:flex;gap:9px;padding:10px 12px;border-bottom:1px solid var(--border-subtle);cursor:pointer;}
+  .notif-item:hover{background:var(--bg-surface-2);}
+  .notif-item .dot{margin-top:5px;flex-shrink:0;}
+  .notif-item.unread .dot{background:var(--accent-strong);}
+  .notif-item:not(.unread) .dot{background:transparent;border:1.5px solid var(--border);}
+  .notif-text{font-size:12.3px;}
+  .notif-meta{font-size:10.8px;color:var(--text-muted);margin-top:2px;}
+  .notif-empty{padding:24px;text-align:center;color:var(--text-muted);font-size:12.5px;}
+
+  /* ---- modals ---- */
+  .modal-overlay{position:fixed;inset:0;background:rgba(8,10,13,.6);display:none;align-items:center;justify-content:center;z-index:110;}
+  .modal-overlay.open{display:flex;}
+  .modal{width:460px;max-width:92vw;max-height:88vh;overflow-y:auto;background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius-md);box-shadow:0 20px 50px rgba(0,0,0,.45);}
+  .modal.wide{width:600px;}
+  .modal-head{padding:16px 18px 4px;}
+  .modal-title{font-size:15px;font-weight:700;margin:0;}
+  .modal-body{padding:14px 18px;}
+  .modal-foot{padding:14px 18px 18px;display:flex;justify-content:flex-end;gap:8px;}
+  .field-label{font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:5px;display:block;}
+  .field{margin-bottom:12px;}
+  .account-option{
+    display:flex;align-items:center;gap:10px;padding:10px;border:1px solid var(--border);border-radius:var(--radius-sm);
+    cursor:pointer;margin-bottom:8px;
+  }
+  .account-option:hover{background:var(--bg-surface-2);}
+  .account-option.selected{border-color:var(--accent);background:var(--accent-soft);}
+  .radio{width:15px;height:15px;border-radius:50%;border:1.5px solid var(--border);flex-shrink:0;position:relative;}
+  .account-option.selected .radio{border-color:var(--accent-strong);}
+  .account-option.selected .radio::after{content:"";position:absolute;inset:2.5px;border-radius:50%;background:var(--accent-strong);}
+  .context-banner{
+    display:flex;justify-content:space-between;align-items:center;padding:10px 12px;
+    border-radius:var(--radius-sm);background:var(--bg-surface-2);border:1px solid var(--border);
+    font-size:12.3px;margin-bottom:14px;
+  }
+  .destructive-summary{background:var(--red-soft);border:1px solid rgba(229,99,107,.35);border-radius:var(--radius-sm);padding:11px 12px;font-size:12.6px;margin-bottom:6px;}
+
+  /* ---- toasts ---- */
+  .toast-stack{position:fixed;bottom:16px;right:16px;display:flex;flex-direction:column;gap:8px;z-index:200;}
+  .toast{
+    display:flex;align-items:center;gap:9px;padding:10px 13px;background:var(--bg-surface-3);
+    border:1px solid var(--border);border-radius:var(--radius-sm);font-size:12.5px;
+    box-shadow:0 10px 25px rgba(0,0,0,.35);min-width:220px;
+    animation:toastIn .18s ease;
+  }
+  @keyframes toastIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+  .toast.success .dot{background:var(--green);}
+  .toast.info .dot{background:var(--accent-strong);}
+
+  .kbd{font-family:var(--font-mono);font-size:10.5px;background:var(--bg-surface-3);border:1px solid var(--border);border-radius:3px;padding:1px 5px;color:var(--text-secondary);}
+
+  @media (max-width:880px){
+    :root{--sidebar-w:56px;}
+    .sidebar-head,.sidebar .repo-meta,.sidebar .account-name,.sidebar .account-handle,.sidebar .repo-flags,
+    .sidebar .sidebar-section-label span:first-child{display:none;}
+    .changes-side{width:230px;}
+    .history-list{width:260px;}
+    .notif-panel{right:16px;}
+  }
+</style>
+</head>
+<body>
+
+<div class="shell" id="shell">
+
+  <!-- ============ TOPBAR ============ -->
+  <div class="topbar">
+    <button class="icon-btn" id="sidebarToggle" title="Toggle sidebar" aria-label="Toggle sidebar"></button>
+    <div class="brand">
+      <span class="brand-mark"><span></span><span></span><span></span></span>
+      Quay
+    </div>
+    <div class="row g-8">
+      <span class="topbar-repo" id="topbarRepo">commander</span>
+      <div class="branch-pill" id="topbarBranch" title="Switch branch"></div>
+    </div>
+    <div class="grow"></div>
+    <button class="btn btn-sm" id="paletteOpenBtn">
+      <svg class="icon icon-sm" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"></circle><line x1="20" y1="20" x2="15.5" y2="15.5"></line></svg>
+      Commands
+      <span class="kbd">⌘K</span>
+    </button>
+    <button class="icon-btn notif-btn" id="notifBtn" title="Notifications" aria-label="Notifications">
+      <svg class="icon" viewBox="0 0 24 24"><path d="M6 9a6 6 0 0 1 12 0c0 4 1.5 5.5 2 6H4c.5 -.5 2 -2 2 -6Z"></path><path d="M10 19a2 2 0 0 0 4 0"></path></svg>
+      <span class="notif-badge" id="notifBadge"></span>
+    </button>
+    <div class="account-badge" id="topbarAccount"></div>
+    <button class="icon-btn" id="settingsBtn" title="Settings" aria-label="Open settings">
+      <svg class="icon" viewBox="0 0 24 24"><line x1="4" y1="6" x2="20" y2="6"></line><circle cx="14" cy="6" r="2"></circle><line x1="4" y1="12" x2="20" y2="12"></line><circle cx="8" cy="12" r="2"></circle><line x1="4" y1="18" x2="20" y2="18"></line><circle cx="16" cy="18" r="2"></circle></svg>
+    </button>
+    <div class="notif-panel" id="notifPanel"></div>
+  </div>
+
+  <!-- ============ SIDEBAR ============ -->
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-head">
+      <div class="sidebar-search">
+        <svg class="icon icon-sm" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"></circle><line x1="20" y1="20" x2="15.5" y2="15.5"></line></svg>
+        <input type="text" placeholder="Search repositories…">
+      </div>
+    </div>
+    <div class="sidebar-scroll">
+      <div class="sidebar-section-label"><span>Repositories</span></div>
+      <div id="repoList"></div>
+
+      <div class="sidebar-section-label" style="margin-top:14px;"><span>Accounts</span></div>
+      <div id="accountList"></div>
+    </div>
+    <div class="sidebar-foot">
+      <button class="btn btn-sm" style="width:100%;justify-content:center;" id="addRepoBtn">
+        <svg class="icon icon-sm" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        Add repository
+      </button>
+    </div>
+  </div>
+
+  <!-- ============ MAIN COLUMN ============ -->
+  <div class="main-col">
+    <div class="subnav" id="subnav">
+      <div class="subnav-group" id="subnavLocal">
+        <div class="subnav-tab active" data-view="overview">Overview</div>
+        <div class="subnav-tab" data-view="changes">Changes<span class="count" id="changesCount"></span></div>
+        <div class="subnav-tab" data-view="branches">Branches</div>
+        <div class="subnav-tab" data-view="history">History</div>
+        <div class="subnav-tab" data-view="stashes">Stashes</div>
+        <div class="subnav-tab" data-view="tags">Tags</div>
+        <div class="subnav-tab" data-view="remotes">Remotes</div>
+      </div>
+      <div class="subnav-divider"></div>
+      <div class="subnav-group" id="subnavGithub">
+        <div class="subnav-tab" data-view="prs">Pull requests<span class="count" id="prCount"></span></div>
+        <div class="subnav-tab" data-view="issues">Issues</div>
+        <div class="subnav-tab" data-view="actions">Actions</div>
+        <div class="subnav-tab" data-view="releases">Releases</div>
+        <div class="subnav-tab" data-view="settings">Settings</div>
+      </div>
+    </div>
+
+    <div class="view-scroll">
+
+      <!-- OVERVIEW -->
+      <div class="view active" id="view-overview"></div>
+
+      <!-- CHANGES -->
+      <div class="view-split" id="view-changes">
+        <div class="changes-side">
+          <div class="changes-files" id="changesFiles"></div>
+          <div class="commit-box">
+            <div class="commit-identity" id="commitIdentity"></div>
+            <label class="row g-8" style="font-size:11.5px;color:var(--text-secondary);cursor:pointer;margin-bottom:8px;">
+              <input type="checkbox" id="amendCheckbox" style="width:auto;"> Amend previous commit
+            </label>
+            <textarea placeholder="Describe what changed…" id="commitMsg"></textarea>
+            <div class="row g-8">
+              <button class="btn grow" id="commitBtn">Commit</button>
+              <button class="btn btn-primary grow" id="commitPushBtn">Commit &amp; push</button>
+            </div>
+          </div>
+        </div>
+        <div class="diff-pane">
+          <div class="diff-toolbar">
+            <div class="row g-10" style="min-width:0;">
+              <span class="diff-file-title truncate" id="diffTitle">Select a file to view its diff</span>
+              <span class="hunk-progress" id="hunkProgress"></span>
+            </div>
+            <div class="segmented" id="diffModeToggle">
+              <button class="active" data-mode="unified">Unified</button>
+              <button data-mode="split">Side-by-side</button>
+            </div>
+          </div>
+          <div class="diff-body" id="diffBody"></div>
+        </div>
+      </div>
+
+      <!-- BRANCHES -->
+      <div class="view" id="view-branches"></div>
+
+      <!-- HISTORY -->
+      <div class="view-split" id="view-history">
+        <div class="history-list" id="historyList"></div>
+        <div class="history-detail" id="historyDetail"></div>
+      </div>
+
+      <!-- STASHES / TAGS / REMOTES -->
+      <div class="view" id="view-stashes"></div>
+      <div class="view" id="view-tags"></div>
+      <div class="view" id="view-remotes"></div>
+
+      <!-- PRS -->
+      <div class="view" id="view-prs"></div>
+      <div class="view" id="view-pr-detail"></div>
+
+      <!-- ISSUES -->
+      <div class="view" id="view-issues"></div>
+
+      <!-- ACTIONS -->
+      <div class="view" id="view-actions"></div>
+
+      <!-- RELEASES -->
+      <div class="view" id="view-releases"></div>
+
+      <!-- SETTINGS -->
+      <div class="view" id="view-settings"></div>
+
+    </div>
+
+    <!-- ============ CONSOLE DOCK ============ -->
+    <div class="console-dock" id="consoleDock">
+      <div class="console-head" id="consoleHead">
+        <div class="console-head-left">
+          <svg class="icon icon-sm" viewBox="0 0 24 24"><polyline points="4 6 10 12 4 18"></polyline><line x1="12" y1="18" x2="20" y2="18"></line></svg>
+          Console
+          <span class="console-cwd" id="consoleCwd"></span>
+        </div>
+        <div class="row g-6">
+          <button class="icon-btn btn-sm" id="consoleClearBtn" title="Clear output" aria-label="Clear console output">
+            <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M4 7h16"></path><path d="M9 7V5a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v2"></path><path d="M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2 -2l1 -13"></path></svg>
+          </button>
+          <svg class="icon" id="consoleChevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </div>
+      </div>
+      <div class="console-body" id="consoleBody"></div>
+      <div class="console-input-row">
+        <span class="console-prompt">❯</span>
+        <input type="text" id="consoleInput" placeholder="Type a git or gh command…" autocomplete="off">
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ============ COMMAND PALETTE ============ -->
+<div class="overlay" id="paletteOverlay">
+  <div class="palette">
+    <div class="palette-input-row">
+      <svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"></circle><line x1="20" y1="20" x2="15.5" y2="15.5"></line></svg>
+      <input type="text" id="paletteInput" placeholder="Type a command…" autocomplete="off">
+      <span class="kbd">Esc</span>
+    </div>
+    <div class="palette-list" id="paletteList"></div>
+  </div>
+</div>
+
+<!-- ============ ACCOUNT SWITCH MODAL ============ -->
+<div class="modal-overlay" id="accountModalOverlay">
+  <div class="modal">
+    <div class="modal-head"><h3 class="modal-title">Switch GitHub account</h3></div>
+    <div class="modal-body">
+      <p class="muted" style="margin:0 0 14px;font-size:12.5px;">
+        This changes which identity is used for GitHub actions in this session — pull requests, issues, pushes over HTTPS, and API calls. Quay never switches accounts on its own.
+      </p>
+      <div id="accountOptions"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" data-close="accountModalOverlay">Cancel</button>
+      <button class="btn btn-primary" id="confirmAccountSwitch">Switch account</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ NEW PULL REQUEST MODAL ============ -->
+<div class="modal-overlay" id="newPrModalOverlay">
+  <div class="modal wide">
+    <div class="modal-head"><h3 class="modal-title">Create pull request</h3></div>
+    <div class="modal-body">
+      <div class="context-banner">
+        <div class="row g-8">
+          <svg class="icon icon-sm" viewBox="0 0 24 24"><circle cx="6" cy="6" r="2"></circle><circle cx="6" cy="18" r="2"></circle><circle cx="18" cy="18" r="2"></circle><line x1="6" y1="8" x2="6" y2="16"></line><path d="M18 16 C18 10 12 10 12 10"></path></svg>
+          <span id="newPrRepoLine" class="mono"></span>
+        </div>
+        <span class="account-badge" id="newPrAccountBadge" style="cursor:default;"></span>
+      </div>
+      <div class="row g-8" style="margin-bottom:12px;">
+        <div class="field grow" style="margin-bottom:0;">
+          <label class="field-label">Base</label>
+          <select style="width:100%;background:var(--bg-surface);border:1px solid var(--border);border-radius:4px;padding:7px 8px;">
+            <option>main</option><option>release/2.4.0</option>
+          </select>
+        </div>
+        <div class="field grow" style="margin-bottom:0;">
+          <label class="field-label">Compare</label>
+          <select style="width:100%;background:var(--bg-surface);border:1px solid var(--border);border-radius:4px;padding:7px 8px;">
+            <option>feature/dispatch-retry</option><option>fix/quartz-misfire-handling</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label class="field-label">Title</label>
+        <input type="text" value="Add exponential backoff to dispatch retry">
+      </div>
+      <div class="field" style="margin-bottom:12px;">
+        <label class="field-label">Description</label>
+        <textarea style="height:70px;">Retries a failed dispatch with exponential backoff instead of a fixed interval, capped at 5 attempts. Covers the Quartz misfire case reported in #142.</textarea>
+      </div>
+      <label class="row g-8" style="font-size:12.5px;color:var(--text-secondary);cursor:pointer;margin-bottom:14px;">
+        <input type="checkbox" style="width:auto;"> Open as draft
+      </label>
+      <div class="field">
+        <label class="field-label">Reviewers</label>
+        <div class="chip-toggle-group" id="prReviewers"></div>
+      </div>
+      <div class="field">
+        <label class="field-label">Assignees</label>
+        <div class="chip-toggle-group" id="prAssignees"></div>
+      </div>
+      <div class="field" style="margin-bottom:0;">
+        <label class="field-label">Labels</label>
+        <div class="chip-toggle-group" id="prLabels"></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" data-close="newPrModalOverlay">Cancel</button>
+      <button class="btn btn-primary" id="confirmCreatePr">Create pull request</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ GENERIC FORM MODAL ============ -->
+<div class="modal-overlay" id="formModalOverlay">
+  <div class="modal">
+    <div class="modal-head"><h3 class="modal-title" id="formModalTitle">Form</h3></div>
+    <div class="modal-body" id="formModalBody"></div>
+    <div class="modal-foot">
+      <button class="btn" data-close="formModalOverlay">Cancel</button>
+      <button class="btn btn-primary" id="formModalSubmit">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ CONFLICT EDITOR MODAL ============ -->
+<div class="modal-overlay" id="conflictModalOverlay">
+  <div class="modal wide">
+    <div class="modal-head"><h3 class="modal-title">Resolve conflict</h3></div>
+    <div class="modal-body">
+      <div class="row g-8 wrap" id="conflictFileTabs" style="margin-bottom:14px;"></div>
+      <div id="conflictEditorBody"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-danger" id="abortMergeBtn" style="margin-right:auto;">Abort merge</button>
+      <button class="btn" data-close="conflictModalOverlay">Close</button>
+      <button class="btn btn-primary" id="continueMergeBtn" disabled>Continue merge</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ CONFIRM (DESTRUCTIVE) MODAL ============ -->
+<div class="modal-overlay" id="confirmModalOverlay">
+  <div class="modal">
+    <div class="modal-head"><h3 class="modal-title" id="confirmTitle">Are you sure?</h3></div>
+    <div class="modal-body">
+      <div class="destructive-summary" id="confirmBody"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" data-close="confirmModalOverlay">Cancel</button>
+      <button class="btn btn-danger" id="confirmActionBtn">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-stack" id="toastStack"></div>
+
+<script>
+(function(){
+"use strict";
+
+/* ============================================================
+   ICONS
+   ============================================================ */
+var ICONS = {
+  star:'<polygon points="12 2 14.9 8.6 22 9.3 16.6 14.1 18.2 21 12 17.3 5.8 21 7.4 14.1 2 9.3 9.1 8.6"></polygon>',
+  branch:'<circle cx="7" cy="6" r="2"></circle><circle cx="7" cy="18" r="2"></circle><circle cx="18" cy="10" r="2"></circle><line x1="7" y1="8" x2="7" y2="16"></line><path d="M7 13 C7 10 10 10 12 10 C15 10 16 10 18 10"></path>',
+  pr:'<circle cx="6" cy="6" r="2"></circle><circle cx="6" cy="18" r="2"></circle><circle cx="18" cy="18" r="2"></circle><line x1="6" y1="8" x2="6" y2="16"></line><path d="M18 16 C18 10 12 10 12 10"></path>',
+  issue:'<circle cx="12" cy="12" r="9"></circle><line x1="12" y1="8" x2="12" y2="13"></line><circle cx="12" cy="16.3" r=".9" fill="currentColor" stroke="none"></circle>',
+  check:'<polyline points="5 13 10 18 19 7"></polyline>',
+  refresh:'<path d="M4 12a8 8 0 0 1 14.5 -4.5"></path><polyline points="18 3 18.5 7.5 14 7"></polyline><path d="M20 12a8 8 0 0 1 -14.5 4.5"></path><polyline points="6 21 5.5 16.5 10 17"></polyline>',
+  up:'<line x1="12" y1="19" x2="12" y2="5"></line><polyline points="6 11 12 5 18 11"></polyline>',
+  down:'<line x1="12" y1="5" x2="12" y2="19"></line><polyline points="6 13 12 19 18 13"></polyline>',
+  commit:'<line x1="12" y1="3" x2="12" y2="8"></line><circle cx="12" cy="12" r="3.4"></circle><line x1="12" y1="16" x2="12" y2="21"></line>',
+  ext:'<path d="M14 4h6v6"></path><line x1="20" y1="4" x2="10" y2="14"></line><path d="M18 13v6a1 1 0 0 1 -1 1H5a1 1 0 0 1 -1 -1V7a1 1 0 0 1 1 -1h6"></path>',
+  terminal:'<polyline points="4 6 10 12 4 18"></polyline><line x1="12" y1="18" x2="20" y2="18"></line>',
+  trash:'<path d="M4 7h16"></path><path d="M9 7V5a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v2"></path><path d="M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2 -2l1 -13"></path>',
+  play:'<polygon points="8 5 19 12 8 19"></polygon>',
+  tag:'<path d="M3 11.5V5a2 2 0 0 1 2 -2h6.5L20 11.5 12.5 19 3 11.5Z"></path><circle cx="7.5" cy="7.5" r="1.4" fill="currentColor" stroke="none"></circle>',
+  copy:'<rect x="9" y="9" width="11" height="11" rx="1.5"></rect><rect x="4" y="4" width="11" height="11" rx="1.5"></rect>',
+  chevronRight:'<polyline points="9 6 15 12 9 18"></polyline>',
+  chevronDown:'<polyline points="6 9 12 15 18 9"></polyline>',
+  x:'<line x1="6" y1="6" x2="18" y2="18"></line><line x1="18" y1="6" x2="6" y2="18"></line>',
+  plus:'<line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>',
+  folder:'<path d="M4 6a1 1 0 0 1 1 -1h4.5l2 2H19a1 1 0 0 1 1 1v10a1 1 0 0 1 -1 1H5a1 1 0 0 1 -1 -1Z"></path>',
+  bolt:'<polygon points="12 2 4 14 11 14 10 22 20 9 13 9 12 2"></polygon>',
+  clock:'<circle cx="12" cy="12" r="9"></circle><polyline points="12 7 12 12 15.5 14"></polyline>',
+  cmdline:'<line x1="4" y1="12" x2="20" y2="12"></line><polyline points="4 6 8 6"></polyline><polyline points="16 18 20 18"></polyline>',
+  refreshRepo:'<circle cx="12" cy="12" r="9"></circle><path d="M9 12h6M12 9v6"></path>',
+  settings2:'<line x1="4" y1="6" x2="20" y2="6"></line><circle cx="14" cy="6" r="2"></circle><line x1="4" y1="12" x2="20" y2="12"></line><circle cx="8" cy="12" r="2"></circle><line x1="4" y1="18" x2="20" y2="18"></line><circle cx="16" cy="18" r="2"></circle>'
+};
+function icon(name, cls){ return '<svg class="icon '+(cls||'')+'" viewBox="0 0 24 24">'+(ICONS[name]||'')+'</svg>'; }
+
+/* ============================================================
+   MOCK DATA
+   ============================================================ */
+var state = {
+  activeRepoId:'commander',
+  activeAccountId:'work',
+  activeView:'overview',
+  selectedFileIdx:0,
+  diffMode:'unified',
+  amend:false,
+  stagedHunks:{},
+  mergeConflict:null,
+  pendingAccountSelection:'work'
+};
+
+var accounts = [
+  {id:'personal', label:'Personal', handle:'@d2vk', host:'github.com', color:'violet', initials:'D',
+   scopes:'repo, read:org', sshAlias:'github-personal', sshKey:'~/.ssh/id_ed25519_personal'},
+  {id:'work', label:'Work', handle:'@d2vk-vikunalabs', host:'github.com', color:'accent', initials:'W',
+   scopes:'repo, workflow, read:org', sshAlias:'github-work', sshKey:'~/.ssh/id_ed25519_work'},
+  {id:'client', label:'Client', handle:'@d2vk-client', host:'github.client.example', color:'teal', initials:'C',
+   scopes:'repo', sshAlias:'github-client', sshKey:'~/.ssh/id_ed25519_client'}
+];
+
+var repos = [
+  {id:'commander', name:'commander', path:'~/code/work/commander', favorite:true,
+   branch:'feature/dispatch-retry', ahead:2, behind:0, accountGroup:'work',
+   remote:'git@github-work:vikunalabs/commander.git', ghRepo:'vikunalabs/commander',
+   staged:1, modified:1, untracked:1,
+   lastCommit:{sha:'a91f2c4', msg:'Add exponential backoff to dispatch retry', author:'D2VK', time:'22 minutes ago'}},
+  {id:'bikili', name:'bikili', path:'~/code/personal/bikili', favorite:true,
+   branch:'main', ahead:0, behind:1, accountGroup:'personal',
+   remote:'git@github-personal:vikunalabs/bikili.git', ghRepo:'vikunalabs/bikili',
+   staged:0, modified:0, untracked:0,
+   lastCommit:{sha:'7c02ab1', msg:'Swap Spring Batch resilience for plain Quartz + JDBC', author:'D2VK', time:'3 days ago'}},
+  {id:'audiotube', name:'audiotube', path:'~/code/personal/audiotube', favorite:false,
+   branch:'main', ahead:0, behind:0, accountGroup:'personal',
+   remote:'git@github-personal:vikunalabs/audiotube.git', ghRepo:'vikunalabs/audiotube',
+   staged:0, modified:0, untracked:0,
+   lastCommit:{sha:'e5df901', msg:'Fix background playback dropping on tab discard', author:'D2VK', time:'6 days ago'}},
+  {id:'springboot-bootstrap-api', name:'springboot-bootstrap-api', path:'~/code/work/springboot-bootstrap-api', favorite:false,
+   branch:'develop', ahead:3, behind:0, accountGroup:'work',
+   remote:'git@github-work:vikunalabs/springboot-bootstrap-api.git', ghRepo:'vikunalabs/springboot-bootstrap-api',
+   staged:0, modified:0, untracked:0,
+   lastCommit:{sha:'1b44f3e', msg:'Add Helm values for observability sidecar', author:'D2VK', time:'1 day ago'}}
+];
+
+var changeFiles = {
+  staged:[
+    {path:'src/main/java/com/vikunalabs/commander/dispatch/DispatchRetryService.java', flag:'M', checked:true},
+    {path:'src/main/resources/application.yml', flag:'M', checked:true}
+  ],
+  modified:[
+    {path:'src/main/java/com/vikunalabs/commander/scheduler/ReportScheduler.java', flag:'M', checked:false}
+  ],
+  untracked:[
+    {path:'src/test/java/com/vikunalabs/commander/dispatch/DispatchRetryServiceTest.java', flag:'?', checked:false}
+  ]
+};
+
+var diffs = {
+  'src/main/java/com/vikunalabs/commander/dispatch/DispatchRetryService.java':[
+    {t:'hunk', text:'@@ -18,10 +18,19 @@ public class DispatchRetryService {'},
+    {t:'ctx', n1:18, n2:18, text:'    private final DispatchClient client;'},
+    {t:'ctx', n1:19, n2:19, text:'    private static final int MAX_ATTEMPTS = 5;'},
+    {t:'del', n1:20, text:'    private static final long RETRY_DELAY_MS = 2000;'},
+    {t:'add', n2:21, text:'    private static final long BASE_DELAY_MS = 500;'},
+    {t:'add', n2:22, text:'    private static final long MAX_DELAY_MS = 30_000;'},
+    {t:'ctx', n1:21, n2:23, text:''},
+    {t:'ctx', n1:22, n2:24, text:'    public DispatchResult retry(DispatchJob job, int attempt) {'},
+    {t:'del', n1:23, text:'        if (attempt >= MAX_ATTEMPTS) {'},
+    {t:'add', n2:25, text:'        long delay = Math.min(MAX_DELAY_MS, BASE_DELAY_MS * (1L << attempt));'},
+    {t:'add', n2:26, text:'        if (attempt >= MAX_ATTEMPTS) {'},
+    {t:'ctx', n1:24, n2:27, text:'            return DispatchResult.exhausted(job);'},
+    {t:'ctx', n1:25, n2:28, text:'        }'},
+    {t:'hunk', text:'@@ -40,6 +49,10 @@ public class DispatchRetryService {'},
+    {t:'ctx', n1:40, n2:49, text:'        return client.send(job);'},
+    {t:'ctx', n1:41, n2:50, text:'    }'},
+    {t:'add', n2:51, text:''},
+    {t:'add', n2:52, text:'    long currentDelay() {'},
+    {t:'add', n2:53, text:'        return BASE_DELAY_MS;'},
+    {t:'add', n2:54, text:'    }'}
+  ],
+  'src/main/resources/application.yml':[
+    {t:'hunk', text:'@@ -12,6 +12,8 @@ commander:'},
+    {t:'ctx', n1:12, n2:12, text:'  dispatch:'},
+    {t:'del', n1:13, text:'    retry-delay-ms: 2000'},
+    {t:'add', n2:13, text:'    base-delay-ms: 500'},
+    {t:'add', n2:14, text:'    max-delay-ms: 30000'},
+    {t:'ctx', n1:14, n2:15, text:'    max-attempts: 5'}
+  ],
+  'src/main/java/com/vikunalabs/commander/scheduler/ReportScheduler.java':[
+    {t:'hunk', text:'@@ -41,7 +41,7 @@ public class ReportScheduler {'},
+    {t:'ctx', n1:41, n2:41, text:'    private void handleMisfire(JobExecutionContext ctx) {'},
+    {t:'del', n1:42, text:'        log.warn("Misfire on job {}", ctx.getJobDetail().getKey());'},
+    {t:'add', n2:42, text:'        log.warn("Misfire on job {} — scheduling retry", ctx.getJobDetail().getKey());'},
+    {t:'ctx', n1:43, n2:43, text:'    }'}
+  ],
+  'src/test/java/com/vikunalabs/commander/dispatch/DispatchRetryServiceTest.java':[
+    {t:'hunk', text:'@@ -0,0 +1,14 @@'},
+    {t:'add', n2:1, text:'class DispatchRetryServiceTest {'},
+    {t:'add', n2:2, text:''},
+    {t:'add', n2:3, text:'    @Test'},
+    {t:'add', n2:4, text:'    void backsOffExponentiallyUpToCap() {'},
+    {t:'add', n2:5, text:'        // ...'},
+    {t:'add', n2:6, text:'    }'},
+    {t:'add', n2:7, text:'}'}
+  ]
+};
+
+var branches = [
+  {name:'feature/dispatch-retry', current:true, ahead:2, behind:0, tracking:'origin/feature/dispatch-retry', last:'22 minutes ago'},
+  {name:'main', current:false, ahead:0, behind:0, tracking:'origin/main', last:'2 days ago'},
+  {name:'fix/quartz-misfire-handling', current:false, ahead:1, behind:3, tracking:'origin/fix/quartz-misfire-handling', last:'5 days ago'},
+  {name:'release/2.4.0', current:false, ahead:0, behind:0, tracking:'origin/release/2.4.0', last:'9 days ago'}
+];
+
+var commits = [
+  {sha:'a91f2c4', msg:'Add exponential backoff to dispatch retry', author:'D2VK', time:'22 minutes ago', lane:'accent',
+   files:['DispatchRetryService.java','application.yml'], body:'Replaces the fixed 2s retry delay with exponential backoff capped at 30s, addressing repeated dispatch storms during downstream outages.'},
+  {sha:'6dd18e0', msg:'Log misfire context before rescheduling', author:'D2VK', time:'3 hours ago', lane:'accent',
+   files:['ReportScheduler.java'], body:'Adds the job key to the misfire warning so retries are traceable in the dispatch log.'},
+  {sha:'0fbb774', msg:'Merge branch main into feature/dispatch-retry', author:'D2VK', time:'1 day ago', lane:'accent',
+   files:['pom.xml'], body:'Pulls in the Quartz 2.5 bump from main.'},
+  {sha:'2e94a11', msg:'Bump Quartz Scheduler to 2.5.0', author:'D2VK', time:'2 days ago', lane:'muted',
+   files:['pom.xml'], body:'Picks up the misfire-handling fix upstream.'},
+  {sha:'88c3f02', msg:'Add integration test for stuck-job detection', author:'D2VK', time:'2 days ago', lane:'muted',
+   files:['StuckJobDetectorTest.java'], body:'Covers the case where a job is marked RUNNING past its expected window.'},
+  {sha:'c015bfa', msg:'Extract DispatchClient interface', author:'D2VK', time:'4 days ago', lane:'muted',
+   files:['DispatchClient.java','DispatchClientImpl.java'], body:'Prep work for retry logic — separates the HTTP call from dispatch orchestration.'},
+  {sha:'9a2f5dd', msg:'Initial dispatch retry scaffolding', author:'D2VK', time:'5 days ago', lane:'muted',
+   files:['DispatchRetryService.java'], body:'Adds the service skeleton and wires it into the dispatch pipeline behind a feature flag.'}
+];
+
+var teamMembers = [
+  {id:'maya', name:'Maya Chen'},
+  {id:'alex', name:'Alex Torres'}
+];
+var labelOptions = [
+  {t:'enhancement',c:'accent'}, {t:'bug',c:'red'}, {t:'chore',c:'muted'},
+  {t:'release',c:'violet'}, {t:'docs',c:'muted'}, {t:'ci',c:'teal'}, {t:'quartz',c:'violet'}
+];
+var prSelection = { reviewers:[], assignees:['d2vk'], labels:[] };
+
+var prs = [
+  {num:214, title:'Add exponential backoff to dispatch retry', base:'main', compare:'feature/dispatch-retry',
+   author:'D2VK', state:'open', draft:false, checks:'pass', labels:[{t:'enhancement',c:'accent'}], updated:'22 minutes ago',
+   body:'Retries a failed dispatch with exponential backoff instead of a fixed interval, capped at 5 attempts. Covers the Quartz misfire case reported in #142.'},
+  {num:211, title:'Fix Quartz misfire handling under clock skew', base:'main', compare:'fix/quartz-misfire-handling',
+   author:'D2VK', state:'open', draft:true, checks:'running', labels:[{t:'bug',c:'red'}], updated:'5 days ago',
+   body:'Draft — still validating against a simulated NTP drift scenario before requesting review.'},
+  {num:206, title:'Cut 2.4.0 release branch', base:'main', compare:'release/2.4.0',
+   author:'D2VK', state:'open', draft:false, checks:'fail', labels:[{t:'release',c:'violet'}], updated:'9 days ago',
+   body:'Freezes scope for 2.4.0. CI is failing on the Helm chart lint step — needs a values schema fix before merge.'},
+  {num:198, title:'Upgrade Spring Boot to 3.4', base:'main', compare:'chore/spring-boot-3.4',
+   author:'D2VK', state:'merged', draft:false, checks:'pass', labels:[{t:'chore',c:'muted'}], updated:'2 weeks ago',
+   body:'Routine dependency upgrade, no behavioral changes expected.'},
+  {num:190, title:'Remove deprecated v1 dispatch endpoint', base:'main', compare:'chore/remove-v1-endpoint',
+   author:'D2VK', state:'closed', draft:false, checks:'pass', labels:[{t:'chore',c:'muted'}], updated:'3 weeks ago',
+   body:'Closed without merging — the v1 endpoint still has one external caller, revisit after their migration.'}
+];
+
+var issues = [
+  {num:142, title:'Dispatch storms downstream services during outages', state:'open', labels:[{t:'bug',c:'red'}], assignee:'D2VK', updated:'1 hour ago'},
+  {num:139, title:'Quartz misfires occasionally under clock skew', state:'open', labels:[{t:'bug',c:'red'},{t:'quartz',c:'violet'}], assignee:'D2VK', updated:'5 days ago'},
+  {num:121, title:'Add Helm values schema validation to CI', state:'open', labels:[{t:'ci',c:'teal'}], assignee:null, updated:'9 days ago'},
+  {num:97, title:'Document dispatch retry configuration', state:'closed', labels:[{t:'docs',c:'muted'}], assignee:'D2VK', updated:'2 weeks ago'}
+];
+
+var actionsRuns = [
+  {name:'CI', branch:'feature/dispatch-retry', status:'pass', sha:'a91f2c4', time:'22 minutes ago'},
+  {name:'CI', branch:'release/2.4.0', status:'fail', sha:'8a021bc', time:'9 days ago'},
+  {name:'Helm chart lint', branch:'release/2.4.0', status:'fail', sha:'8a021bc', time:'9 days ago'},
+  {name:'CI', branch:'main', status:'pass', sha:'0fbb774', time:'1 day ago'}
+];
+
+var releases = [
+  {tag:'v2.3.0', title:'2.3.0 — Quartz 2.5 upgrade', date:'2 days ago', prerelease:false},
+  {tag:'v2.3.0-rc.1', title:'2.3.0-rc.1', date:'9 days ago', prerelease:true},
+  {tag:'v2.2.1', title:'2.2.1 — hotfix for stuck-job detection', date:'3 weeks ago', prerelease:false}
+];
+
+var remotes = [
+  {name:'origin', fetch:'git@github-work:vikunalabs/commander.git', push:'git@github-work:vikunalabs/commander.git'}
+];
+var tags = [
+  {name:'v2.3.0', sha:'0fbb774', date:'2 days ago'},
+  {name:'v2.2.1', sha:'c015bfa', date:'3 weeks ago'}
+];
+var stashes = [
+  {msg:'WIP: alternate backoff jitter experiment', on:'feature/dispatch-retry', time:'3 days ago'}
+];
+
+var notifications = [
+  {id:1, type:'review', text:'D2VK requested your review on #214 Add exponential backoff to dispatch retry', repo:'commander', time:'20 minutes ago', read:false, target:{view:'pr-detail', pr:214}},
+  {id:2, type:'ci', text:'CI failed on release/2.4.0', repo:'commander', time:'9 days ago', read:false, target:{view:'actions'}},
+  {id:3, type:'mention', text:'You were mentioned in #142 Dispatch storms downstream services during outages', repo:'commander', time:'1 hour ago', read:true, target:{view:'issues'}},
+  {id:4, type:'merged', text:'#198 Upgrade Spring Boot to 3.4 was merged', repo:'commander', time:'2 weeks ago', read:true, target:{view:'prs'}}
+];
+
+var conflictContent = {
+  'src/main/java/com/vikunalabs/commander/scheduler/ReportScheduler.java':{
+    ours:'log.warn("Misfire on job {} — scheduling retry", ctx.getJobDetail().getKey());',
+    theirs:'log.warn("Job {} misfired; will reschedule", ctx.getJobDetail().getKey());'
+  },
+  'src/main/resources/application.yml':{
+    ours:'    base-delay-ms: 500\n    max-delay-ms: 30000',
+    theirs:'    retry-delay-ms: 1500\n    retry-jitter: true'
+  },
+  'src/main/java/com/vikunalabs/commander/dispatch/DispatchRetryService.java':{
+    ours:'private static final long MAX_DELAY_MS = 30_000;',
+    theirs:'private static final long MAX_DELAY_MS = 60_000;'
+  }
+};
+
+var selectedPr = prs[0];
+var selectedCommit = commits[0];
+var confirmAction = null;
+var prDetailTab = 'conversation';
+var prFilter = 'open';
+var issueFilter = 'open';
+var notifOpen = false;
+var activeConflictFile = null;
+var formModalFields = [];
+var formModalOnSubmit = null;
+
+/* ============================================================
+   HELPERS
+   ============================================================ */
+function repoById(id){ return repos.filter(function(r){ return r.id===id; })[0]; }
+function accountById(id){ return accounts.filter(function(a){ return a.id===id; })[0]; }
+function activeRepo(){ return repoById(state.activeRepoId); }
+function activeAccount(){ return accountById(state.activeAccountId); }
+function accountColorHex(color){
+  var map = {accent:'var(--accent-strong)', violet:'var(--violet)', teal:'var(--teal)', green:'var(--green)'};
+  return map[color] || 'var(--bg-surface-3)';
+}
+function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function randSha(){ return Math.random().toString(16).slice(2,9); }
+function toggleInArray(arr, val){
+  var i = arr.indexOf(val);
+  if(i>-1) arr.splice(i,1); else arr.push(val);
+}
+
+function toast(msg, kind){
+  var stack = document.getElementById('toastStack');
+  var el = document.createElement('div');
+  el.className = 'toast '+(kind||'info');
+  el.innerHTML = '<span class="dot"></span><span>'+msg+'</span>';
+  stack.appendChild(el);
+  setTimeout(function(){ el.style.opacity='0'; el.style.transition='opacity .2s ease'; setTimeout(function(){ el.remove(); },200); }, 3200);
+}
+
+function consoleLog(cmd, lines, isErr){
+  var body = document.getElementById('consoleBody');
+  var cmdEl = document.createElement('div');
+  cmdEl.className = 'console-line';
+  cmdEl.innerHTML = '<span class="console-prompt">❯ </span><span class="console-cmd">'+escapeHtml(cmd)+'</span>';
+  body.appendChild(cmdEl);
+  (lines||[]).forEach(function(l){
+    var out = document.createElement('div');
+    out.className = 'console-line '+(isErr?'console-out-err':'console-out');
+    out.textContent = l;
+    body.appendChild(out);
+  });
+  body.scrollTop = body.scrollHeight;
+}
+
+/* ============================================================
+   RENDER: SIDEBAR
+   ============================================================ */
+function renderSidebar(){
+  var repoList = document.getElementById('repoList');
+  repoList.innerHTML = repos.map(function(r){
+    var active = r.id === state.activeRepoId;
+    var flags = (r.ahead? '<span style="color:var(--green)">↑'+r.ahead+'</span>':'') +
+                (r.behind? ' <span style="color:var(--red)">↓'+r.behind+'</span>':'');
+    return '<div class="repo-row'+(active?' active':'')+'" data-repo="'+r.id+'">'+
+      '<span class="repo-star'+(r.favorite?' filled':'')+'">'+icon('star','icon-sm')+'</span>'+
+      '<div class="repo-meta grow truncate">'+
+        '<div class="repo-name truncate">'+r.name+'</div>'+
+        '<div class="repo-path truncate">'+r.path+'</div>'+
+      '</div>'+
+      '<div class="repo-flags mono">'+flags+'</div>'+
+    '</div>';
+  }).join('');
+
+  var accountList = document.getElementById('accountList');
+  accountList.innerHTML = accounts.map(function(a){
+    var active = a.id === state.activeAccountId;
+    return '<div class="account-row'+(active?' active-account':'')+'" data-account="'+a.id+'">'+
+      '<span class="dot dot-'+a.color+'"></span>'+
+      '<div class="grow truncate">'+
+        '<div class="account-name truncate">'+a.label+'</div>'+
+        '<div class="account-handle truncate">'+a.handle+' · '+a.host+'</div>'+
+      '</div>'+
+      (active?icon('check','icon-sm'):'')+
+    '</div>';
+  }).join('');
+
+  repoList.querySelectorAll('.repo-row').forEach(function(el){
+    el.addEventListener('click', function(){ selectRepo(el.dataset.repo); });
+  });
+  accountList.querySelectorAll('.account-row').forEach(function(el){
+    el.addEventListener('click', function(){ openAccountModal(); });
+  });
+}
+
+function selectRepo(id){
+  if(id === state.activeRepoId) return;
+  state.activeRepoId = id;
+  var r = repoById(id);
+  toast('Switched to '+r.name, 'info');
+  renderAll();
+}
+
+/* ============================================================
+   RENDER: TOPBAR
+   ============================================================ */
+function renderTopbar(){
+  var r = activeRepo(), a = activeAccount();
+  document.getElementById('topbarRepo').textContent = r.name;
+  document.getElementById('topbarBranch').innerHTML = icon('branch','icon-sm')+' '+r.branch+
+    (r.ahead? ' <span style="color:var(--green);margin-left:4px;">↑'+r.ahead+'</span>':'') +
+    (r.behind? ' <span style="color:var(--red)">↓'+r.behind+'</span>':'');
+  var badge = document.getElementById('topbarAccount');
+  badge.innerHTML = '<span class="account-avatar" style="background:'+accountColorHex(a.color)+'">'+a.initials+'</span>'+a.label+' · '+a.handle;
+  badge.onclick = function(){ openAccountModal(); };
+}
+
+/* ============================================================
+   RENDER: OVERVIEW
+   ============================================================ */
+function renderOverview(){
+  var r = activeRepo(), a = activeAccount();
+  var repoAccount = accountById(r.accountGroup);
+  var isMismatch = a.id !== r.accountGroup;
+
+  var warn = '';
+  if(isMismatch){
+    warn = '<div class="warn-banner">'+icon('bolt')+
+      '<div><strong>Account mismatch.</strong> This repository\u2019s remote resolves to '+
+      '<strong>'+repoAccount.label+' · '+repoAccount.handle+'</strong>, but '+
+      '<strong>'+a.label+' · '+a.handle+'</strong> is active. GitHub actions here will use the active account unless you switch. '+
+      '<a href="#" id="switchToRepoAccount" style="color:var(--accent-strong);font-weight:600;">Switch to '+repoAccount.label+'</a></div>'+
+    '</div>';
+  }
+
+  var html =
+    warn +
+    '<div class="stat-grid" style="margin-bottom:18px;">'+
+      statBox('Branch', r.branch, true)+
+      statBox('Ahead / behind', '<span style="color:var(--green)">↑'+r.ahead+'</span> <span style="color:var(--red)">↓'+r.behind+'</span>')+
+      statBox('Working tree', (r.staged+r.modified+r.untracked)+' file'+((r.staged+r.modified+r.untracked)===1?'':'s'))+
+      statBox('GitHub account', a.label)+
+    '</div>'+
+    '<div class="row g-14" style="align-items:flex-start;">'+
+      '<div class="panel panel-pad grow">'+
+        '<div class="section-title">Latest commit</div>'+
+        '<div class="commit-line">'+icon('commit','icon-sm')+
+          '<div class="grow"><div style="font-weight:500;">'+r.lastCommit.msg+'</div>'+
+          '<div class="muted" style="font-size:11.5px;margin-top:3px;">'+
+            '<span class="commit-sha">'+r.lastCommit.sha+'</span> · '+r.lastCommit.author+' · '+r.lastCommit.time+'</div></div>'+
+        '</div>'+
+        '<div class="divider"></div>'+
+        '<div class="section-title" style="margin-bottom:8px;">Remote</div>'+
+        '<div class="mono muted" style="font-size:12px;margin-bottom:4px;">'+r.remote+'</div>'+
+        '<div class="row g-8" style="margin-top:2px;">'+
+          '<span class="badge badge-muted">'+r.ghRepo+'</span>'+
+          '<span class="muted" style="font-size:11.5px;">via '+repoAccount.label+' · '+repoAccount.handle+'</span>'+
+        '</div>'+
+      '</div>'+
+      '<div class="panel panel-pad" style="width:230px;flex-shrink:0;">'+
+        '<div class="section-title">Quick actions</div>'+
+        '<div class="col g-8">'+
+          actionBtn('refresh','Fetch')+
+          actionBtn('down','Pull')+
+          actionBtn('up','Push', r.ahead>0)+
+          actionBtn('branch','New branch')+
+        '</div>'+
+      '</div>'+
+    '</div>';
+
+  document.getElementById('view-overview').innerHTML = html;
+
+  var link = document.getElementById('switchToRepoAccount');
+  if(link) link.addEventListener('click', function(e){ e.preventDefault(); openAccountModal(repoAccount.id); });
+
+  document.querySelectorAll('#view-overview [data-quick]').forEach(function(b){
+    b.addEventListener('click', function(){ runQuickAction(b.dataset.quick); });
+  });
+}
+function statBox(label, value, mono){
+  return '<div class="stat-box"><div class="stat-label">'+label+'</div><div class="stat-value" style="'+(mono?'':'font-family:var(--font-sans);font-size:15px;')+'">'+value+'</div></div>';
+}
+function actionBtn(iconName, label, primary){
+  return '<button class="btn'+(primary?' btn-primary':'')+'" data-quick="'+label+'" style="justify-content:flex-start;">'+icon(iconName,'icon-sm')+' '+label+'</button>';
+}
+function runQuickAction(label){
+  var r = activeRepo();
+  if(label === 'New branch'){ openNewBranchModal(); return; }
+  var msgs = {
+    'Fetch':['Fetching origin…','remote: Enumerating objects: 9, done.','From github.com:vikunalabs/'+r.name,'   0fbb774..a91f2c4  '+r.branch+' -> origin/'+r.branch],
+    'Pull':['Updating '+r.branch+'…','Fast-forward','2 files changed, 14 insertions(+), 3 deletions(-)'],
+    'Push':['Pushing to origin/'+r.branch+'…','Enumerating objects: 12, done.','To github.com:vikunalabs/'+r.name,'   0fbb774..a91f2c4  '+r.branch+' -> '+r.branch]
+  };
+  consoleLog('git '+label.toLowerCase(), msgs[label]||[]);
+  if(!document.getElementById('consoleDock').classList.contains('expanded')) toggleConsole(true);
+  toast(label+' complete', 'success');
+}
+
+/* ============================================================
+   RENDER: CHANGES
+   ============================================================ */
+function allChangeFiles(){
+  return [].concat(
+    changeFiles.staged.map(function(f){ return {path:f.path, flag:f.flag, checked:f.checked, group:'Staged'}; }),
+    changeFiles.modified.map(function(f){ return {path:f.path, flag:f.flag, checked:f.checked, group:'Modified'}; }),
+    changeFiles.untracked.map(function(f){ return {path:f.path, flag:f.flag, checked:f.checked, group:'Untracked'}; })
+  );
+}
+function removeChangeFile(target){
+  ['staged','modified','untracked'].forEach(function(key){
+    var idx = -1;
+    changeFiles[key].forEach(function(x,i){ if(x.path===target.path) idx=i; });
+    if(idx>-1) changeFiles[key].splice(idx,1);
+  });
+}
+
+function renderChanges(){
+  var msgEl = document.getElementById('commitMsg');
+  var btnEl = document.getElementById('commitBtn');
+  var pushBtnEl = document.getElementById('commitPushBtn');
+
+  if(state.mergeConflict){
+    msgEl.disabled = true;
+    btnEl.disabled = true;
+    pushBtnEl.disabled = true;
+    msgEl.placeholder = 'Resolve all conflicts before committing';
+    document.getElementById('commitIdentity').textContent = '';
+    renderConflictChanges();
+    return;
+  }
+  msgEl.disabled = false;
+  btnEl.disabled = false;
+  pushBtnEl.disabled = false;
+  msgEl.placeholder = 'Describe what changed…';
+  document.getElementById('commitIdentity').textContent = 'Committing as D2VK <d2vk@vikunalabs.dev> · local git identity';
+  document.getElementById('changesCount').textContent = allChangeFiles().length ? '('+allChangeFiles().length+')' : '';
+
+  var groups = [
+    {label:'Staged', data:changeFiles.staged, discard:false},
+    {label:'Modified', data:changeFiles.modified, discard:true},
+    {label:'Untracked', data:changeFiles.untracked, discard:true}
+  ];
+  var flat = allChangeFiles();
+  var html = '';
+  groups.forEach(function(g){
+    if(!g.data.length) return;
+    html += '<div class="file-group-label"><span>'+g.label+'</span><span>'+g.data.length+'</span></div>';
+    g.data.forEach(function(f){
+      var idx = -1;
+      flat.forEach(function(x,i){ if(x.path===f.path && x.group===g.label) idx=i; });
+      html += '<div class="file-row'+(idx===state.selectedFileIdx?' selected':'')+'" data-idx="'+idx+'">'+
+        '<span class="checkbox'+(f.checked?' checked':'')+'" data-toggle="'+idx+'">'+(f.checked?icon('check','icon-sm'):'')+'</span>'+
+        '<span class="status-flag status-'+(f.flag==='?'?'Q':f.flag)+'">'+f.flag+'</span>'+
+        '<span class="file-path">'+f.path.split('/').pop()+'</span>'+
+        (g.discard? '<span class="file-row-actions"><button class="icon-btn btn-sm" data-discard="'+idx+'" title="Discard changes">'+icon('trash','icon-sm')+'</button></span>' : '')+
+      '</div>';
+    });
+  });
+  if(!flat.length){
+    html = '<div class="empty-diff" style="height:200px;">'+icon('check','icon-lg')+'<span>Working tree clean</span></div>';
+  }
+  document.getElementById('changesFiles').innerHTML = html;
+
+  document.querySelectorAll('#changesFiles .file-row').forEach(function(el){
+    el.addEventListener('click', function(e){
+      if(e.target.closest('[data-toggle]') || e.target.closest('[data-discard]')) return;
+      state.selectedFileIdx = parseInt(el.dataset.idx,10);
+      renderChanges(); renderDiff();
+    });
+  });
+  document.querySelectorAll('#changesFiles [data-toggle]').forEach(function(el){
+    el.addEventListener('click', function(e){
+      e.stopPropagation();
+      var idx = parseInt(el.dataset.toggle,10);
+      var f = flat[idx];
+      f.checked = !f.checked;
+      renderChanges();
+    });
+  });
+  document.querySelectorAll('#changesFiles [data-discard]').forEach(function(el){
+    el.addEventListener('click', function(e){
+      e.stopPropagation();
+      var idx = parseInt(el.dataset.discard,10);
+      var f = flat[idx];
+      var name = f.path.split('/').pop();
+      var body = f.group === 'Untracked' ?
+        "Deletes this untracked file from disk. This can't be undone." :
+        "Reverts this file to its last committed state, discarding all local edits. This can't be undone.";
+      openConfirm('Discard changes to '+name+'?', body, function(){
+        removeChangeFile(f);
+        state.selectedFileIdx = 0;
+        toast('Discarded changes to '+name, 'success');
+        renderChanges();
+      });
+    });
+  });
+
+  renderDiff();
+}
+
+function renderConflictChanges(){
+  var mc = state.mergeConflict;
+  document.getElementById('changesCount').textContent = '('+mc.files.length+')';
+  var resolvedCount = mc.files.filter(function(f){ return f.resolved; }).length;
+  var html = '<div class="conflict-banner">'+icon('bolt')+
+    '<div><strong>'+mc.files.length+' files have conflicts</strong> merging '+mc.source+' into '+activeRepo().branch+'. '+
+    resolvedCount+' of '+mc.files.length+' resolved.</div></div>';
+  html += mc.files.map(function(f){
+    return '<div class="conflict-file-row" data-cfile="'+f.path+'">'+
+      '<span class="row g-8"><span class="status-flag status-U">U</span><span class="file-path">'+f.path.split('/').pop()+'</span></span>'+
+      (f.resolved? '<span class="badge badge-green">Resolved</span>' : '<span class="badge badge-red">Unresolved</span>')+
+    '</div>';
+  }).join('');
+  document.getElementById('changesFiles').innerHTML = html;
+  document.querySelectorAll('#changesFiles [data-cfile]').forEach(function(el){
+    el.addEventListener('click', function(){
+      var f = mc.files.filter(function(x){ return x.path===el.dataset.cfile; })[0];
+      openConflictModal(f);
+    });
+  });
+
+  document.getElementById('diffTitle').textContent = 'Resolve conflicts to continue';
+  document.getElementById('hunkProgress').textContent = '';
+  document.getElementById('diffBody').innerHTML = '<div class="empty-diff">'+icon('bolt','icon-lg')+
+    '<span>Open a conflicted file to resolve it</span>'+
+    '<button class="btn btn-primary btn-sm" id="openConflictEditorBtn" style="margin-top:6px;">Open conflict editor</button></div>';
+  var openBtn = document.getElementById('openConflictEditorBtn');
+  if(openBtn) openBtn.addEventListener('click', function(){ openConflictModal(); });
+  updateContinueMergeState();
+}
+
+/* ---- diff rendering (unified + split + hunk staging) ---- */
+function buildHunks(diffLines){
+  var hunks = [];
+  var current = null;
+  diffLines.forEach(function(line, i){
+    if(line.t === 'hunk'){
+      current = {header:line.text, index:i, lines:[]};
+      hunks.push(current);
+    } else if(current){
+      current.lines.push(line);
+    }
+  });
+  return hunks;
+}
+function diffLineHtml(line, forceCls){
+  var cls = forceCls !== undefined ? forceCls : (line.t==='add'?'diff-add':line.t==='del'?'diff-del':'');
+  var n1 = line.n1!==undefined?line.n1:'';
+  var n2 = line.n2!==undefined?line.n2:'';
+  var marker = line.t==='add'?'+':line.t==='del'?'-':' ';
+  return '<div class="diff-line '+cls+'">'+
+    '<span class="diff-ln">'+n1+'</span><span class="diff-ln">'+n2+'</span>'+
+    '<span class="diff-content">'+marker+' '+escapeHtml(line.text)+'</span></div>';
+}
+function hunkHeaderHtml(path, h){
+  var key = path+'#'+h.index;
+  var staged = !!state.stagedHunks[key];
+  return '<div class="diff-hunk"><span>'+escapeHtml(h.header)+'</span>'+
+    '<button class="hunk-stage-btn'+(staged?' staged':'')+'" data-hunkkey="'+key+'">'+(staged?'Staged':'Stage hunk')+'</button></div>';
+}
+function renderDiff(){
+  var flat = allChangeFiles();
+  var f = flat[state.selectedFileIdx];
+  var title = document.getElementById('diffTitle');
+  var progress = document.getElementById('hunkProgress');
+  var body = document.getElementById('diffBody');
+  if(!f){
+    title.textContent = 'Select a file to view its diff';
+    progress.textContent = '';
+    body.innerHTML = '<div class="empty-diff">'+icon('branch','icon-lg')+'<span>No file selected</span></div>';
+    return;
+  }
+  title.textContent = f.path;
+  var d = diffs[f.path] || [];
+  var hunks = buildHunks(d);
+
+  if(state.diffMode === 'split'){
+    body.innerHTML = hunks.map(function(h){
+      var leftLines = h.lines.filter(function(l){ return l.t !== 'add'; });
+      var rightLines = h.lines.filter(function(l){ return l.t !== 'del'; });
+      var leftHtml = leftLines.map(function(l){ return diffLineHtml(l, l.t==='del'?'diff-del':''); }).join('');
+      var rightHtml = rightLines.map(function(l){ return diffLineHtml(l, l.t==='add'?'diff-add':''); }).join('');
+      return hunkHeaderHtml(f.path, h)+
+        '<div class="diff-split-row"><div class="diff-split-col">'+leftHtml+'</div><div class="diff-split-col">'+rightHtml+'</div></div>';
+    }).join('');
+  } else {
+    body.innerHTML = hunks.map(function(h){
+      return hunkHeaderHtml(f.path, h) + h.lines.map(function(l){ return diffLineHtml(l); }).join('');
+    }).join('');
+  }
+
+  body.querySelectorAll('.hunk-stage-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var key = btn.dataset.hunkkey;
+      state.stagedHunks[key] = !state.stagedHunks[key];
+      renderDiff();
+    });
+  });
+
+  var total = hunks.length;
+  var stagedCount = hunks.filter(function(h){ return !!state.stagedHunks[f.path+'#'+h.index]; }).length;
+  progress.textContent = total ? (stagedCount+' of '+total+' hunk'+(total===1?'':'s')+' staged') : '';
+}
+
+document.querySelectorAll('#diffModeToggle button').forEach(function(b){
+  b.addEventListener('click', function(){
+    document.querySelectorAll('#diffModeToggle button').forEach(function(x){ x.classList.remove('active'); });
+    b.classList.add('active');
+    state.diffMode = b.dataset.mode;
+    renderDiff();
+  });
+});
+
+/* ============================================================
+   COMMIT ACTIONS (incl. amend)
+   ============================================================ */
+document.getElementById('amendCheckbox').addEventListener('change', function(e){
+  state.amend = e.target.checked;
+  var msgEl = document.getElementById('commitMsg');
+  var btn = document.getElementById('commitBtn');
+  if(state.amend){
+    msgEl.value = activeRepo().lastCommit.msg;
+    btn.textContent = 'Amend commit';
+  } else {
+    msgEl.value = '';
+    btn.textContent = 'Commit';
+  }
+});
+document.getElementById('commitBtn').addEventListener('click', function(){
+  var msg = document.getElementById('commitMsg').value.trim() || activeRepo().lastCommit.msg;
+  if(state.amend){
+    consoleLog('git commit --amend -m "'+msg+'"', ['[amended '+randSha()+'] '+msg]);
+    toast('Amended previous commit', 'success');
+  } else {
+    consoleLog('git commit -m "'+msg+'"', ['['+activeRepo().branch+' '+randSha()+'] '+msg, ' 2 files changed, 14 insertions(+), 3 deletions(-)']);
+    toast('Committed to '+activeRepo().branch, 'success');
+  }
+});
+document.getElementById('commitPushBtn').addEventListener('click', function(){
+  var msg = document.getElementById('commitMsg').value.trim() || activeRepo().lastCommit.msg;
+  var r = activeRepo();
+  consoleLog('git commit -m "'+msg+'" && git push', [
+    '['+r.branch+' '+randSha()+'] '+msg,
+    'Enumerating objects: 9, done.',
+    'To github.com:vikunalabs/'+r.name,
+    '   0fbb774..'+randSha()+'  '+r.branch+' -> '+r.branch
+  ]);
+  toast('Committed and pushed', 'success');
+});
+
+/* ============================================================
+   RENDER: BRANCHES
+   ============================================================ */
+function renderBranches(){
+  var rows = branches.map(function(b){
+    return '<tr class="'+(b.current?'current-row':'')+'">'+
+      '<td class="mono">'+(b.current?'<strong>'+icon('branch','icon-sm')+' '+b.name+'</strong> <span class="badge badge-accent" style="margin-left:6px;">current</span>':icon('branch','icon-sm')+' '+b.name)+'</td>'+
+      '<td class="mono muted">'+b.tracking+'</td>'+
+      '<td class="mono">'+(b.ahead?'<span style="color:var(--green)">↑'+b.ahead+'</span> ':'')+(b.behind?'<span style="color:var(--red)">↓'+b.behind+'</span>':(b.ahead?'':'<span class="muted">—</span>'))+'</td>'+
+      '<td class="muted">'+b.last+'</td>'+
+      '<td>'+
+        (b.current? '<span class="muted" style="font-size:11.5px;">—</span>' :
+        '<div class="row g-6"><button class="btn btn-sm" data-checkout="'+b.name+'">Checkout</button>'+
+        '<button class="btn btn-sm" data-merge="'+b.name+'">Merge into current</button>'+
+        '<button class="icon-btn btn-sm" data-delete="'+b.name+'" title="Delete branch">'+icon('trash','icon-sm')+'</button></div>')+
+      '</td>'+
+    '</tr>';
+  }).join('');
+
+  document.getElementById('view-branches').innerHTML =
+    '<div class="list-toolbar"><div class="section-title" style="margin:0;">Branches</div>'+
+    '<button class="btn btn-primary btn-sm" id="newBranchBtn">'+icon('plus','icon-sm')+' New branch</button></div>'+
+    '<div class="panel"><table class="datatable"><thead><tr>'+
+    '<th>Name</th><th>Tracking</th><th>Ahead / behind</th><th>Last activity</th><th></th>'+
+    '</tr></thead><tbody>'+rows+'</tbody></table></div>';
+
+  document.getElementById('newBranchBtn').addEventListener('click', function(){ openNewBranchModal(); });
+  document.querySelectorAll('#view-branches [data-checkout]').forEach(function(b){
+    b.addEventListener('click', function(){
+      consoleLog('git checkout '+b.dataset.checkout, ["Switched to branch '"+b.dataset.checkout+"'"]);
+      branches.forEach(function(br){ br.current = (br.name===b.dataset.checkout); });
+      activeRepo().branch = b.dataset.checkout;
+      toast('Checked out '+b.dataset.checkout, 'success');
+      renderTopbar();
+      renderBranches();
+    });
+  });
+  document.querySelectorAll('#view-branches [data-merge]').forEach(function(b){
+    b.addEventListener('click', function(){ mergeBranchIntoCurrent(b.dataset.merge); });
+  });
+  document.querySelectorAll('#view-branches [data-delete]').forEach(function(b){
+    b.addEventListener('click', function(){
+      var name = b.dataset.delete;
+      openConfirm("Delete branch '"+name+"'?",
+        "This deletes the local branch. If it hasn't been merged, its commits become unreachable once garbage collected. This can't be undone from Quay.",
+        function(){
+          var idx = -1;
+          branches.forEach(function(x,i){ if(x.name===name) idx=i; });
+          if(idx>-1) branches.splice(idx,1);
+          toast('Deleted '+name, 'success');
+          consoleLog('git branch -D '+name, ['Deleted branch '+name+' (was '+randSha()+').']);
+          renderBranches();
+        });
+    });
+  });
+}
+
+function mergeBranchIntoCurrent(branchName){
+  if(branchName === 'fix/quartz-misfire-handling'){
+    startConflict(branchName);
+    return;
+  }
+  consoleLog('git merge '+branchName, ["Merge made by the 'ort' strategy.", ' 2 files changed, 9 insertions(+), 2 deletions(-)']);
+  toast('Merged '+branchName+' into '+activeRepo().branch, 'success');
+}
+
+function startConflict(branchName){
+  state.mergeConflict = {
+    source: branchName,
+    files: [
+      {path:'src/main/java/com/vikunalabs/commander/scheduler/ReportScheduler.java', resolved:false},
+      {path:'src/main/resources/application.yml', resolved:false},
+      {path:'src/main/java/com/vikunalabs/commander/dispatch/DispatchRetryService.java', resolved:false}
+    ]
+  };
+  consoleLog('git merge '+branchName, [
+    'Auto-merging src/main/resources/application.yml',
+    'CONFLICT (content): Merge conflict in src/main/resources/application.yml',
+    'Auto-merging src/main/java/com/vikunalabs/commander/scheduler/ReportScheduler.java',
+    'CONFLICT (content): Merge conflict in src/main/java/com/vikunalabs/commander/scheduler/ReportScheduler.java',
+    'Auto-merging src/main/java/com/vikunalabs/commander/dispatch/DispatchRetryService.java',
+    'CONFLICT (content): Merge conflict in src/main/java/com/vikunalabs/commander/dispatch/DispatchRetryService.java',
+    'Automatic merge failed; fix conflicts and then commit the result.'
+  ], true);
+  toast('Merge conflict — 3 files need resolving', 'info');
+  showView('changes');
+}
+
+/* ============================================================
+   CONFLICT EDITOR MODAL
+   ============================================================ */
+function openConflictModal(prefFile){
+  var mc = state.mergeConflict;
+  if(!mc) return;
+  activeConflictFile = prefFile || mc.files.filter(function(f){ return !f.resolved; })[0] || mc.files[0];
+  renderConflictModal();
+  document.getElementById('conflictModalOverlay').classList.add('open');
+}
+function renderConflictModal(){
+  var mc = state.mergeConflict;
+  if(!mc) return;
+  var tabs = document.getElementById('conflictFileTabs');
+  tabs.innerHTML = mc.files.map(function(f){
+    var short = f.path.split('/').pop();
+    return '<div class="filter-chip'+(f===activeConflictFile?' active':'')+'" data-cfile="'+f.path+'">'+
+      (f.resolved?icon('check','icon-sm'):'')+' '+short+'</div>';
+  }).join('');
+  tabs.querySelectorAll('[data-cfile]').forEach(function(el){
+    el.addEventListener('click', function(){
+      activeConflictFile = mc.files.filter(function(f){ return f.path===el.dataset.cfile; })[0];
+      renderConflictModal();
+    });
+  });
+
+  var c = conflictContent[activeConflictFile.path] || {ours:'', theirs:''};
+  var body = document.getElementById('conflictEditorBody');
+  var merged = '<<<<<<< HEAD\n'+c.ours+'\n=======\n'+c.theirs+'\n>>>>>>> '+mc.source;
+  body.innerHTML =
+    '<div class="conflict-pane-label">Ours ('+activeRepo().branch+')</div>'+
+    '<div class="conflict-pane ours">'+escapeHtml(c.ours)+'</div>'+
+    '<div class="conflict-pane-label">Theirs ('+mc.source+')</div>'+
+    '<div class="conflict-pane theirs">'+escapeHtml(c.theirs)+'</div>'+
+    '<div class="conflict-pane-label">Merged result</div>'+
+    '<textarea class="conflict-merged" id="conflictMergedText">'+escapeHtml(merged)+'</textarea>'+
+    '<div class="row g-8" style="margin-top:10px;">'+
+      '<button class="btn btn-sm" id="acceptOursBtn">Accept ours</button>'+
+      '<button class="btn btn-sm" id="acceptTheirsBtn">Accept theirs</button>'+
+      '<button class="btn btn-primary btn-sm" id="markResolvedBtn" style="margin-left:auto;">'+
+      (activeConflictFile.resolved?'Resolved':'Mark resolved')+'</button>'+
+    '</div>';
+
+  document.getElementById('acceptOursBtn').addEventListener('click', function(){
+    document.getElementById('conflictMergedText').value = c.ours;
+  });
+  document.getElementById('acceptTheirsBtn').addEventListener('click', function(){
+    document.getElementById('conflictMergedText').value = c.theirs;
+  });
+  document.getElementById('markResolvedBtn').addEventListener('click', function(){
+    activeConflictFile.resolved = true;
+    toast('Marked '+activeConflictFile.path.split('/').pop()+' resolved', 'success');
+    renderConflictModal();
+    updateContinueMergeState();
+    if(state.activeView === 'changes') renderChanges();
+  });
+}
+function updateContinueMergeState(){
+  var mc = state.mergeConflict;
+  var btn = document.getElementById('continueMergeBtn');
+  var allResolved = mc ? mc.files.every(function(f){ return f.resolved; }) : false;
+  btn.disabled = !allResolved;
+}
+document.getElementById('continueMergeBtn').addEventListener('click', function(){
+  var mc = state.mergeConflict;
+  if(!mc) return;
+  consoleLog('git commit', ['Merge made; conflicts resolved for '+mc.files.length+' files.']);
+  toast('Merge completed', 'success');
+  state.mergeConflict = null;
+  closeModal('conflictModalOverlay');
+  if(state.activeView === 'changes') renderChanges();
+});
+document.getElementById('abortMergeBtn').addEventListener('click', function(){
+  openConfirm('Abort merge?', "Resets the working tree to its pre-merge state and discards all conflict resolutions made so far.", function(){
+    consoleLog('git merge --abort', []);
+    state.mergeConflict = null;
+    closeModal('conflictModalOverlay');
+    toast('Merge aborted', 'success');
+    if(state.activeView === 'changes') renderChanges();
+  });
+});
+
+/* ============================================================
+   GENERIC FORM MODAL
+   ============================================================ */
+function openFormModal(title, fields, onSubmit, submitLabel){
+  document.getElementById('formModalTitle').textContent = title;
+  formModalFields = fields;
+  formModalOnSubmit = onSubmit;
+  var body = document.getElementById('formModalBody');
+  body.innerHTML = fields.map(function(f){
+    var id = 'formfield-'+f.key;
+    if(f.type === 'textarea'){
+      return '<div class="field"><label class="field-label">'+f.label+'</label>'+
+        '<textarea id="'+id+'" style="height:70px;">'+(f.value||'')+'</textarea></div>';
+    }
+    if(f.type === 'select'){
+      var opts = (f.options||[]).map(function(o){ return '<option'+(o===f.value?' selected':'')+'>'+o+'</option>'; }).join('');
+      return '<div class="field"><label class="field-label">'+f.label+'</label>'+
+        '<select id="'+id+'" style="width:100%;background:var(--bg-surface);border:1px solid var(--border);border-radius:4px;padding:7px 8px;">'+opts+'</select></div>';
+    }
+    if(f.type === 'checkbox'){
+      return '<label class="row g-8" style="font-size:12.5px;color:var(--text-secondary);cursor:pointer;margin-bottom:12px;">'+
+        '<input type="checkbox" id="'+id+'" style="width:auto;"'+(f.value?' checked':'')+'> '+f.label+'</label>';
+    }
+    return '<div class="field"><label class="field-label">'+f.label+'</label>'+
+      '<input type="text" id="'+id+'" value="'+(f.value||'')+'"></div>';
+  }).join('');
+  document.getElementById('formModalSubmit').textContent = submitLabel || 'Save';
+  document.getElementById('formModalOverlay').classList.add('open');
+}
+document.getElementById('formModalSubmit').addEventListener('click', function(){
+  var values = {};
+  formModalFields.forEach(function(f){
+    var el = document.getElementById('formfield-'+f.key);
+    if(f.type === 'checkbox') values[f.key] = el.checked;
+    else values[f.key] = el.value;
+  });
+  closeModal('formModalOverlay');
+  if(formModalOnSubmit) formModalOnSubmit(values);
+});
+
+function openNewBranchModal(baseRef){
+  var base = baseRef || activeRepo().branch;
+  var branchNames = branches.map(function(b){ return b.name; });
+  var options = branchNames.indexOf(base) > -1 ? branchNames : branchNames.concat([base]);
+  openFormModal('New branch', [
+    {key:'name', label:'Branch name', type:'text', value:''},
+    {key:'base', label:'Based on', type:'select', value:base, options:options},
+    {key:'checkout', label:'Checkout after creating', type:'checkbox', value:true}
+  ], function(values){
+    if(!values.name){ toast('Branch name is required', 'info'); return; }
+    branches.push({name:values.name, current:false, ahead:0, behind:0, tracking:'—', last:'just now'});
+    consoleLog('git checkout -b '+values.name+' '+values.base, ["Switched to a new branch '"+values.name+"'"]);
+    if(values.checkout){
+      branches.forEach(function(b){ b.current = (b.name===values.name); });
+      activeRepo().branch = values.name;
+      renderTopbar();
+    }
+    toast('Created branch '+values.name, 'success');
+    if(state.activeView === 'branches') renderBranches();
+  }, 'Create branch');
+}
+
+/* ============================================================
+   RENDER: HISTORY
+   ============================================================ */
+function renderHistory(){
+  var list = document.getElementById('historyList');
+  list.innerHTML = commits.map(function(c,i){
+    return '<div class="history-row'+(c===selectedCommit?' selected':'')+'" data-idx="'+i+'">'+
+      '<div class="lane"><span class="node" style="background:'+(c.lane==='accent'?'var(--accent-strong)':'var(--text-muted)')+'"></span></div>'+
+      '<div class="grow truncate">'+
+        '<div class="history-msg truncate">'+c.msg+'</div>'+
+        '<div class="history-meta">'+'<span class="commit-sha">'+c.sha+'</span> · '+c.author+' · '+c.time+'</div>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+  list.querySelectorAll('.history-row').forEach(function(el){
+    el.addEventListener('click', function(){ selectedCommit = commits[parseInt(el.dataset.idx,10)]; renderHistory(); });
+  });
+  document.getElementById('historyDetail').innerHTML =
+    '<div class="section-title" style="margin-bottom:4px;">'+selectedCommit.msg+'</div>'+
+    '<div class="muted" style="font-size:12px;margin-bottom:16px;">'+
+      '<span class="commit-sha">'+selectedCommit.sha+'</span> · '+selectedCommit.author+' · '+selectedCommit.time+'</div>'+
+    '<p style="max-width:65ch;">'+selectedCommit.body+'</p>'+
+    '<div class="divider"></div>'+
+    '<div class="section-title">Changed files</div>'+
+    selectedCommit.files.map(function(f){ return '<div class="commit-line" style="padding:6px 0;"><span class="status-flag status-M">M</span><span class="mono" style="font-size:12.3px;">'+f+'</span></div>'; }).join('')+
+    '<div class="divider"></div>'+
+    '<div class="row g-8 wrap">'+
+      '<button class="btn btn-sm" id="copyShaBtn">'+icon('copy','icon-sm')+' Copy SHA</button>'+
+      '<button class="btn btn-sm" id="branchFromHereBtn">'+icon('branch','icon-sm')+' Branch from here</button>'+
+      '<button class="btn btn-sm" id="cherryPickBtn">Cherry-pick</button>'+
+      '<button class="btn btn-sm" id="revertCommitBtn">Revert commit</button>'+
+      '<button class="btn btn-sm btn-danger" id="resetToHereBtn">Reset to here</button>'+
+    '</div>';
+
+  document.getElementById('copyShaBtn').addEventListener('click', function(){
+    toast('Copied '+selectedCommit.sha, 'success');
+  });
+  document.getElementById('branchFromHereBtn').addEventListener('click', function(){
+    openNewBranchModal(selectedCommit.sha);
+  });
+  document.getElementById('cherryPickBtn').addEventListener('click', function(){
+    consoleLog('git cherry-pick '+selectedCommit.sha, ['['+activeRepo().branch+' '+randSha()+'] '+selectedCommit.msg]);
+    toast('Cherry-picked '+selectedCommit.sha+' onto '+activeRepo().branch, 'success');
+  });
+  document.getElementById('revertCommitBtn').addEventListener('click', function(){
+    consoleLog('git revert --no-edit '+selectedCommit.sha, ['['+activeRepo().branch+' '+randSha()+'] Revert "'+selectedCommit.msg+'"']);
+    toast('Created revert commit', 'success');
+  });
+  document.getElementById('resetToHereBtn').addEventListener('click', function(){
+    openConfirm('Reset '+activeRepo().branch+' to '+selectedCommit.sha+'?',
+      'This moves '+activeRepo().branch+' to this commit. Commits after it stay in your reflog for a while but are no longer reachable from the branch. Consider a soft reset if you want to keep the changes staged.',
+      function(){
+        consoleLog('git reset --hard '+selectedCommit.sha, ['HEAD is now at '+selectedCommit.sha+' '+selectedCommit.msg]);
+        toast('Reset '+activeRepo().branch+' to '+selectedCommit.sha, 'success');
+      });
+  });
+}
+
+/* ============================================================
+   RENDER: STASHES / TAGS / REMOTES
+   ============================================================ */
+function renderStashes(){
+  var rows = stashes.map(function(s,i){
+    return '<tr><td>'+s.msg+'</td><td class="mono muted">'+s.on+'</td><td class="muted">'+s.time+'</td>'+
+    '<td><div class="row g-6">'+
+      '<button class="btn btn-sm" data-stash-apply="'+i+'">Apply</button>'+
+      '<button class="btn btn-sm" data-stash-pop="'+i+'">Pop</button>'+
+      '<button class="icon-btn btn-sm" data-stash-drop="'+i+'" title="Drop">'+icon('trash','icon-sm')+'</button>'+
+    '</div></td></tr>';
+  }).join('');
+  document.getElementById('view-stashes').innerHTML =
+    '<div class="section-title">Stashes</div>'+
+    (stashes.length?
+      '<div class="panel"><table class="datatable"><thead><tr><th>Message</th><th>Branch</th><th>Created</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div>'
+      : emptyState('No stashes', 'Stash your working changes to set them aside without committing.'));
+
+  document.querySelectorAll('#view-stashes [data-stash-apply]').forEach(function(b){
+    b.addEventListener('click', function(){
+      var s = stashes[parseInt(b.dataset.stashApply,10)];
+      consoleLog('git stash apply', ['On branch '+s.on, 'Changes not staged for commit:']);
+      toast('Applied stash', 'success');
+    });
+  });
+  document.querySelectorAll('#view-stashes [data-stash-pop]').forEach(function(b){
+    b.addEventListener('click', function(){
+      var idx = parseInt(b.dataset.stashPop,10);
+      var s = stashes[idx];
+      consoleLog('git stash pop', ['On branch '+s.on, 'Dropped stash@{'+idx+'}']);
+      stashes.splice(idx,1);
+      toast('Popped stash', 'success');
+      renderStashes();
+    });
+  });
+  document.querySelectorAll('#view-stashes [data-stash-drop]').forEach(function(b){
+    b.addEventListener('click', function(){
+      var idx = parseInt(b.dataset.stashDrop,10);
+      openConfirm('Drop this stash?', "Permanently removes it. This can't be undone.", function(){
+        stashes.splice(idx,1);
+        toast('Dropped stash', 'success');
+        renderStashes();
+      });
+    });
+  });
+}
+function renderTags(){
+  var rows = tags.map(function(t){
+    return '<tr><td class="mono">'+t.name+'</td><td class="commit-sha">'+t.sha+'</td><td class="muted">'+t.date+'</td>'+
+    '<td><div class="row g-6"><button class="btn btn-sm" data-tag-checkout="'+t.name+'">Checkout</button>'+
+    '<button class="btn btn-sm" data-tag-push="'+t.name+'">Push</button></div></td></tr>';
+  }).join('');
+  document.getElementById('view-tags').innerHTML =
+    '<div class="list-toolbar"><div class="section-title" style="margin:0;">Tags</div><button class="btn btn-sm" id="newTagBtn">'+icon('plus','icon-sm')+' New tag</button></div>'+
+    '<div class="panel"><table class="datatable"><thead><tr><th>Name</th><th>Commit</th><th>Date</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+
+  document.getElementById('newTagBtn').addEventListener('click', function(){
+    openFormModal('New tag', [
+      {key:'name', label:'Tag name', type:'text', value:''},
+      {key:'base', label:'Commit', type:'select', value:commits[0].sha, options:commits.map(function(c){ return c.sha; })}
+    ], function(values){
+      if(!values.name){ toast('Tag name is required', 'info'); return; }
+      tags.unshift({name:values.name, sha:values.base, date:'just now'});
+      consoleLog('git tag '+values.name+' '+values.base, []);
+      toast('Created tag '+values.name, 'success');
+      renderTags();
+    }, 'Create tag');
+  });
+  document.querySelectorAll('#view-tags [data-tag-checkout]').forEach(function(b){
+    b.addEventListener('click', function(){
+      consoleLog('git checkout tags/'+b.dataset.tagCheckout, ['Note: switching to \'tags/'+b.dataset.tagCheckout+'\'.', 'HEAD is now in detached state']);
+      toast('Checked out '+b.dataset.tagCheckout, 'success');
+    });
+  });
+  document.querySelectorAll('#view-tags [data-tag-push]').forEach(function(b){
+    b.addEventListener('click', function(){
+      consoleLog('git push origin '+b.dataset.tagPush, ['To github.com:vikunalabs/'+activeRepo().name, ' * [new tag]         '+b.dataset.tagPush+' -> '+b.dataset.tagPush]);
+      toast('Pushed '+b.dataset.tagPush, 'success');
+    });
+  });
+}
+function renderRemotes(){
+  var rows = remotes.map(function(r){
+    return '<tr><td class="mono">'+r.name+'</td><td class="mono muted">'+r.fetch+'</td><td class="mono muted">'+r.push+'</td>'+
+    '<td><button class="btn btn-sm" data-remote-fetch="'+r.name+'">'+icon('refresh','icon-sm')+' Fetch</button></td></tr>';
+  }).join('');
+  document.getElementById('view-remotes').innerHTML =
+    '<div class="list-toolbar"><div class="section-title" style="margin:0;">Remotes</div><button class="btn btn-sm" id="addRemoteBtn">'+icon('plus','icon-sm')+' Add remote</button></div>'+
+    '<div class="panel"><table class="datatable"><thead><tr><th>Name</th><th>Fetch URL</th><th>Push URL</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+
+  document.getElementById('addRemoteBtn').addEventListener('click', function(){
+    openFormModal('Add remote', [
+      {key:'name', label:'Name', type:'text', value:''},
+      {key:'url', label:'URL', type:'text', value:''}
+    ], function(values){
+      if(!values.name || !values.url){ toast('Name and URL are required', 'info'); return; }
+      remotes.push({name:values.name, fetch:values.url, push:values.url});
+      toast('Added remote '+values.name, 'success');
+      renderRemotes();
+    }, 'Add remote');
+  });
+  document.querySelectorAll('#view-remotes [data-remote-fetch]').forEach(function(b){
+    b.addEventListener('click', function(){
+      consoleLog('git fetch '+b.dataset.remoteFetch, ['remote: Enumerating objects: 6, done.', 'From '+b.dataset.remoteFetch]);
+      toast('Fetched '+b.dataset.remoteFetch, 'success');
+    });
+  });
+}
+function emptyState(title, sub){
+  return '<div class="panel panel-pad" style="text-align:center;padding:40px 20px;color:var(--text-secondary);">'+
+    '<div style="font-weight:600;color:var(--text-primary);margin-bottom:4px;">'+title+'</div>'+
+    '<div style="font-size:12.5px;">'+sub+'</div></div>';
+}
+
+/* ============================================================
+   RENDER: PULL REQUESTS
+   ============================================================ */
+function renderPrs(){
+  document.getElementById('prCount').textContent = '('+prs.filter(function(p){ return p.state==='open'; }).length+')';
+  var chips = [{k:'open', l:'Open'}, {k:'draft', l:'Draft'}, {k:'merged', l:'Merged'}, {k:'closed', l:'Closed'}, {k:'all', l:'All'}];
+  var chipsHtml = chips.map(function(c){ return '<div class="filter-chip'+(prFilter===c.k?' active':'')+'" data-filter="'+c.k+'">'+c.l+'</div>'; }).join('');
+
+  var filtered = prFilter==='draft' ? prs.filter(function(p){ return p.draft; }) :
+                 prFilter==='all' ? prs : prs.filter(function(p){ return p.state===prFilter; });
+
+  var rows = filtered.map(function(p){
+    var checkIcon = p.checks==='pass'?'<span style="color:var(--green)">'+icon('check','icon-sm')+'</span>':
+                    p.checks==='fail'?'<span style="color:var(--red)">'+icon('x','icon-sm')+'</span>':
+                    '<span style="color:var(--amber)">'+icon('clock','icon-sm')+'</span>';
+    return '<div class="item-row" data-pr="'+p.num+'">'+
+      '<span class="item-icon" style="color:'+(p.state==='merged'?'var(--violet)':p.state==='closed'?'var(--red)':'var(--green)')+'">'+icon('pr')+'</span>'+
+      '<div class="grow">'+
+        '<div class="item-title">'+p.title+' <span class="num">#'+p.num+'</span>'+(p.draft?' <span class="badge badge-muted">Draft</span>':'')+'</div>'+
+        '<div class="item-sub">'+checkIcon+' <span class="mono">'+p.compare+' → '+p.base+'</span> · opened by '+p.author+' · updated '+p.updated+
+          p.labels.map(function(l){ return ' <span class="badge badge-'+l.c+'">'+l.t+'</span>'; }).join('')+
+        '</div>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+
+  document.getElementById('view-prs').innerHTML =
+    '<div class="list-toolbar">'+
+      '<div class="filter-chips">'+chipsHtml+'</div>'+
+      '<button class="btn btn-primary btn-sm" id="newPrBtn">'+icon('plus','icon-sm')+' New pull request</button>'+
+    '</div>'+
+    (rows || emptyState('No pull requests here', 'Try a different filter, or open a new one.'));
+
+  document.querySelectorAll('#view-prs .filter-chip').forEach(function(c){
+    c.addEventListener('click', function(){ prFilter = c.dataset.filter; renderPrs(); });
+  });
+  document.querySelectorAll('#view-prs .item-row').forEach(function(r){
+    r.addEventListener('click', function(){
+      selectedPr = prs.filter(function(p){ return p.num == r.dataset.pr; })[0];
+      prDetailTab = 'conversation';
+      showView('pr-detail');
+    });
+  });
+  var newBtn = document.getElementById('newPrBtn');
+  if(newBtn) newBtn.addEventListener('click', openNewPrModal);
+}
+
+function renderPrDetail(){
+  var p = selectedPr, a = activeAccount(), r = activeRepo();
+  var stateBadge = p.state==='open'? '<span class="badge badge-green">Open</span>' :
+                    p.state==='merged'? '<span class="badge badge-violet">Merged</span>' :
+                    '<span class="badge badge-red">Closed</span>';
+  var tabs = ['conversation','commits','files changed','checks'];
+  var tabsHtml = tabs.map(function(t){ return '<div class="pr-tab'+(prDetailTab===t?' active':'')+'" data-tab="'+t+'">'+t.charAt(0).toUpperCase()+t.slice(1)+'</div>'; }).join('');
+
+  var tabBody = '';
+  if(prDetailTab==='conversation'){
+    tabBody =
+      '<div class="panel panel-pad" style="margin-bottom:14px;"><p style="margin:0;">'+p.body+'</p></div>'+
+      '<div class="panel panel-pad" style="margin-bottom:14px;">'+
+        '<div class="section-title">Reviewers</div>'+
+        '<div class="review-row">'+icon('check','icon-sm')+'<span style="color:var(--green);">Approved</span><span class="muted">— reviewer pending in this preview</span></div>'+
+      '</div>'+
+      '<div class="comment-box">'+
+        '<textarea placeholder="Leave a comment…" style="height:70px;margin-bottom:8px;"></textarea>'+
+        '<div class="row" style="justify-content:flex-end;"><button class="btn btn-sm">Comment</button></div>'+
+      '</div>';
+  } else if(prDetailTab==='commits'){
+    tabBody = commits.slice(0,3).map(function(c){
+      return '<div class="commit-line">'+icon('commit','icon-sm')+
+      '<div class="grow"><div>'+c.msg+'</div><div class="muted" style="font-size:11.5px;"><span class="commit-sha">'+c.sha+'</span> · '+c.time+'</div></div></div>';
+    }).join('');
+  } else if(prDetailTab==='files changed'){
+    tabBody = allChangeFiles().slice(0,2).map(function(f){
+      return '<div class="commit-line" style="padding:6px 0;"><span class="status-flag status-M">M</span><span class="mono" style="font-size:12.3px;">'+f.path+'</span></div>';
+    }).join('') || '<span class="muted">No file diffs to show in this preview.</span>';
+  } else {
+    tabBody = '<div class="review-row">'+icon('check','icon-sm')+'<span style="color:var(--green);">CI · passed 3m 40s ago</span></div>';
+  }
+
+  document.getElementById('view-pr-detail').innerHTML =
+    '<button class="btn btn-sm" id="backToPrs" style="margin-bottom:14px;">'+icon('chevronRight','icon-sm')+' Back to pull requests</button>'+
+    '<div class="pr-detail-head">'+
+      '<div>'+
+        '<div style="font-size:17px;font-weight:700;margin-bottom:4px;">'+p.title+' <span class="muted" style="font-weight:500;">#'+p.num+'</span></div>'+
+        '<div class="row g-8">'+stateBadge+'<span class="mono muted" style="font-size:12px;">'+p.compare+' → '+p.base+'</span></div>'+
+      '</div>'+
+      '<div class="col g-8" style="align-items:flex-end;">'+
+        '<div class="merge-methods">'+
+          (p.state==='open' && !p.draft ? '<button class="btn btn-primary btn-sm" id="mergePrBtn">Squash and merge</button>':'')+
+        '</div>'+
+        (p.state==='open'? '<button class="btn btn-sm" id="closePrBtn">Close pull request</button>':'')+
+      '</div>'+
+    '</div>'+
+    '<div class="pr-tabs">'+tabsHtml+'</div>'+
+    '<div style="max-width:760px;">'+tabBody+'</div>';
+
+  document.getElementById('backToPrs').addEventListener('click', function(){ showView('prs'); });
+  document.querySelectorAll('#view-pr-detail .pr-tab').forEach(function(t){
+    t.addEventListener('click', function(){ prDetailTab = t.dataset.tab; renderPrDetail(); });
+  });
+  var mergeBtn = document.getElementById('mergePrBtn');
+  if(mergeBtn) mergeBtn.addEventListener('click', function(){
+    openConfirm('Merge #'+p.num+' into '+p.base+'?',
+      'Squashes '+p.compare+' into a single commit on '+p.base+' using '+a.label+' · '+a.handle+'. The source branch will not be deleted automatically.',
+      function(){ p.state='merged'; toast('Merged #'+p.num, 'success'); showView('prs'); });
+  });
+  var closeBtn = document.getElementById('closePrBtn');
+  if(closeBtn) closeBtn.addEventListener('click', function(){
+    openConfirm('Close #'+p.num+' without merging?', 'The branch and its commits stay untouched — this only closes the pull request.',
+      function(){ p.state='closed'; toast('Closed #'+p.num, 'success'); showView('prs'); });
+  });
+}
+
+/* ============================================================
+   NEW PR MODAL (with reviewers / assignees / labels)
+   ============================================================ */
+function openNewPrModal(){
+  var r = activeRepo(), a = activeAccount();
+  document.getElementById('newPrRepoLine').textContent = r.ghRepo;
+  document.getElementById('newPrAccountBadge').innerHTML =
+    '<span class="account-avatar" style="background:'+accountColorHex(a.color)+';margin-right:6px;">'+a.initials+'</span>'+a.label+' · '+a.handle;
+  prSelection = { reviewers:[], assignees:['d2vk'], labels:[] };
+  renderPrModalChips();
+  document.getElementById('newPrModalOverlay').classList.add('open');
+}
+function renderPrModalChips(){
+  var reviewersHtml = teamMembers.map(function(m){
+    var sel = prSelection.reviewers.indexOf(m.id) > -1;
+    return '<div class="chip-toggle'+(sel?' selected':'')+'" data-reviewer="'+m.id+'">'+m.name+'</div>';
+  }).join('');
+  document.getElementById('prReviewers').innerHTML = reviewersHtml;
+
+  var assigneeOptions = [{id:'d2vk', name:'D2VK (you)'}].concat(teamMembers.map(function(m){ return {id:m.id, name:m.name}; }));
+  var assigneesHtml = assigneeOptions.map(function(m){
+    var sel = prSelection.assignees.indexOf(m.id) > -1;
+    return '<div class="chip-toggle'+(sel?' selected':'')+'" data-assignee="'+m.id+'">'+m.name+'</div>';
+  }).join('');
+  document.getElementById('prAssignees').innerHTML = assigneesHtml;
+
+  var labelsHtml = labelOptions.map(function(l){
+    var sel = prSelection.labels.indexOf(l.t) > -1;
+    return '<div class="chip-toggle'+(sel?' selected':'')+'" data-label="'+l.t+'">'+l.t+'</div>';
+  }).join('');
+  document.getElementById('prLabels').innerHTML = labelsHtml;
+
+  document.querySelectorAll('#prReviewers [data-reviewer]').forEach(function(el){
+    el.addEventListener('click', function(){ toggleInArray(prSelection.reviewers, el.dataset.reviewer); renderPrModalChips(); });
+  });
+  document.querySelectorAll('#prAssignees [data-assignee]').forEach(function(el){
+    el.addEventListener('click', function(){ toggleInArray(prSelection.assignees, el.dataset.assignee); renderPrModalChips(); });
+  });
+  document.querySelectorAll('#prLabels [data-label]').forEach(function(el){
+    el.addEventListener('click', function(){ toggleInArray(prSelection.labels, el.dataset.label); renderPrModalChips(); });
+  });
+}
+document.getElementById('confirmCreatePr').addEventListener('click', function(){
+  closeModal('newPrModalOverlay');
+  var reviewerNames = prSelection.reviewers.map(function(id){
+    return teamMembers.filter(function(m){ return m.id===id; })[0].name;
+  });
+  toast('Pull request opened'+(reviewerNames.length? ' — review requested from '+reviewerNames.join(', ') : ''), 'success');
+  showView('prs');
+});
+
+/* ============================================================
+   RENDER: ISSUES
+   ============================================================ */
+function renderIssues(){
+  var filtered = issues.filter(function(i){ return issueFilter==='all' ? true : i.state===issueFilter; });
+  var chips = ['open','closed','all'].map(function(k){
+    return '<div class="filter-chip'+(issueFilter===k?' active':'')+'" data-filter="'+k+'">'+k.charAt(0).toUpperCase()+k.slice(1)+'</div>';
+  }).join('');
+  var rows = filtered.map(function(i){
+    return '<div class="item-row">'+
+      '<span class="item-icon" style="color:'+(i.state==='open'?'var(--green)':'var(--violet)')+'">'+icon('issue')+'</span>'+
+      '<div class="grow">'+
+        '<div class="item-title">'+i.title+' <span class="num">#'+i.num+'</span></div>'+
+        '<div class="item-sub">'+(i.assignee? 'assigned to '+i.assignee+' · ':'unassigned · ')+'updated '+i.updated+
+          i.labels.map(function(l){ return ' <span class="badge badge-'+l.c+'">'+l.t+'</span>'; }).join('')+
+        '</div>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+  document.getElementById('view-issues').innerHTML =
+    '<div class="list-toolbar"><div class="filter-chips">'+chips+'</div>'+
+    '<button class="btn btn-primary btn-sm" id="newIssueBtn">'+icon('plus','icon-sm')+' New issue</button></div>'+
+    (rows || emptyState('No issues here', 'Try a different filter.'));
+
+  document.querySelectorAll('#view-issues .filter-chip').forEach(function(c){
+    c.addEventListener('click', function(){ issueFilter = c.dataset.filter; renderIssues(); });
+  });
+  document.getElementById('newIssueBtn').addEventListener('click', function(){
+    openFormModal('New issue', [
+      {key:'title', label:'Title', type:'text', value:''},
+      {key:'description', label:'Description', type:'textarea', value:''},
+      {key:'assignee', label:'Assignee', type:'select', value:'D2VK', options:['Unassigned','D2VK','Maya Chen','Alex Torres']}
+    ], function(values){
+      if(!values.title){ toast('Title is required', 'info'); return; }
+      var nextNum = Math.max.apply(null, issues.map(function(i){ return i.num; })) + 1;
+      issues.unshift({num:nextNum, title:values.title, state:'open', labels:[], assignee:values.assignee==='Unassigned'?null:values.assignee, updated:'just now'});
+      toast('Opened issue #'+nextNum, 'success');
+      renderIssues();
+    }, 'Create issue');
+  });
+}
+
+/* ============================================================
+   RENDER: ACTIONS / RELEASES / SETTINGS
+   ============================================================ */
+function renderActions(){
+  var rows = actionsRuns.map(function(r, idx){
+    var s = r.status==='pass'? '<span class="badge badge-green">'+icon('check','icon-sm')+' Passed</span>' :
+            r.status==='fail'? '<span class="badge badge-red">'+icon('x','icon-sm')+' Failed</span>' :
+            '<span class="badge badge-amber">'+icon('clock','icon-sm')+' Running</span>';
+    return '<div class="item-row"><span class="item-icon">'+icon('play')+'</span>'+
+      '<div class="grow"><div class="item-title">'+r.name+'</div>'+
+      '<div class="item-sub">'+s+' <span class="mono">'+r.branch+'</span> · <span class="commit-sha">'+r.sha+'</span> · '+r.time+'</div></div>'+
+      '<button class="icon-btn btn-sm" data-rerun="'+idx+'" title="Re-run">'+icon('refresh','icon-sm')+'</button>'+
+    '</div>';
+  }).join('');
+  document.getElementById('view-actions').innerHTML = '<div class="section-title">Workflow runs</div>'+rows;
+
+  document.querySelectorAll('#view-actions [data-rerun]').forEach(function(b){
+    b.addEventListener('click', function(){
+      var idx = parseInt(b.dataset.rerun,10);
+      actionsRuns[idx].status = 'running';
+      renderActions();
+      toast('Re-running '+actionsRuns[idx].name, 'info');
+      setTimeout(function(){
+        actionsRuns[idx].status = 'pass';
+        if(state.activeView==='actions') renderActions();
+        toast(actionsRuns[idx].name+' passed', 'success');
+      }, 1600);
+    });
+  });
+}
+function renderReleases(){
+  var rows = releases.map(function(r){
+    return '<div class="item-row"><span class="item-icon" style="color:var(--accent-strong);">'+icon('tag')+'</span>'+
+    '<div class="grow"><div class="item-title">'+r.title+(r.prerelease?' <span class="badge badge-amber">Pre-release</span>':'')+'</div>'+
+    '<div class="item-sub"><span class="mono">'+r.tag+'</span> · published '+r.date+'</div></div></div>';
+  }).join('');
+  document.getElementById('view-releases').innerHTML =
+    '<div class="list-toolbar"><div class="section-title" style="margin:0;">Releases</div>'+
+    '<button class="btn btn-sm" id="draftReleaseBtn">'+icon('plus','icon-sm')+' Draft a release</button></div>'+rows;
+
+  document.getElementById('draftReleaseBtn').addEventListener('click', function(){
+    openFormModal('Draft a release', [
+      {key:'tag', label:'Tag', type:'select', value:tags[0]?tags[0].name:'', options:tags.map(function(t){ return t.name; })},
+      {key:'title', label:'Title', type:'text', value:''},
+      {key:'notes', label:'Release notes', type:'textarea', value:''},
+      {key:'prerelease', label:'Mark as pre-release', type:'checkbox', value:false}
+    ], function(values){
+      if(!values.title){ toast('Title is required', 'info'); return; }
+      releases.unshift({tag:values.tag, title:values.title, date:'just now', prerelease:values.prerelease});
+      toast('Drafted release '+values.title, 'success');
+      renderReleases();
+    }, 'Save draft');
+  });
+}
+function renderSettings(){
+  var toolsPanel =
+    '<div class="panel panel-pad" style="margin-bottom:16px;max-width:560px;">'+
+      detectRow('Git', true, '2.47.1', '/usr/bin/git')+
+      '<div class="divider"></div>'+
+      detectRow('GitHub CLI', true, '2.63.0', '/usr/bin/gh')+
+    '</div>';
+
+  var credBanner =
+    '<div class="warn-banner">'+icon('bolt')+
+    '<div><strong>No OS keyring detected.</strong> No Secret Service backend (GNOME Keyring, KWallet) is running, so gh is storing tokens in plaintext at <span class="mono">~/.config/gh/hosts.yml</span> with restrictive file permissions. Installing kwallet and enabling the PAM integration adds keyring-backed storage.</div></div>';
+
+  var credRows = accounts.map(function(a){
+    return '<div class="cred-row">'+
+      '<div class="row g-8" style="margin-bottom:4px;"><span class="dot dot-'+a.color+'"></span><strong>'+a.label+'</strong><span class="mono muted" style="font-size:11.5px;">'+a.handle+' · '+a.host+'</span></div>'+
+      '<div class="muted" style="font-size:11.5px;margin-bottom:3px;">Scopes: <span class="mono">'+a.scopes+'</span></div>'+
+      '<div class="muted" style="font-size:11.5px;">SSH: <span class="mono">'+a.sshAlias+'</span> → <span class="mono">'+a.sshKey+'</span></div>'+
+    '</div>';
+  }).join('');
+
+  document.getElementById('view-settings').innerHTML =
+    '<div class="section-title">Detected tools</div>'+ toolsPanel +
+    '<div class="section-title">Account authentication</div>'+
+    '<div style="max-width:560px;margin-bottom:16px;">'+ credBanner + '<div class="panel panel-pad">'+credRows+'</div></div>'+
+    '<div class="section-title">Preferences</div>'+
+    '<div class="panel panel-pad" style="max-width:560px;">'+
+      settingsRow('Editor', 'VS Code')+
+      settingsRow('Terminal', 'Konsole')+
+      settingsRow('File manager', 'Dolphin')+
+      settingsRow('Theme', 'Dark')+
+      settingsRow('Auto-refresh interval', '15 seconds')+
+    '</div>';
+}
+function detectRow(name, ok, version, path){
+  return '<div class="row between" style="padding:6px 0;">'+
+    '<div class="row g-10"><span style="color:'+(ok?'var(--green)':'var(--red)')+'">'+icon(ok?'check':'x','icon-sm')+'</span>'+
+    '<div><div style="font-weight:600;">'+name+'</div><div class="mono muted" style="font-size:11px;">'+path+'</div></div></div>'+
+    '<span class="badge badge-muted mono">'+version+'</span>'+
+  '</div>';
+}
+function settingsRow(label, value){
+  return '<div class="row between" style="padding:7px 0;"><span class="muted">'+label+'</span>'+
+  '<span class="chip">'+value+'</span></div>';
+}
+
+/* ============================================================
+   VIEW SWITCHING
+   ============================================================ */
+function showView(name){
+  state.activeView = name;
+  document.querySelectorAll('.view, .view-split').forEach(function(v){ v.classList.remove('active'); });
+  var target = document.getElementById('view-'+name);
+  if(target) target.classList.add('active');
+
+  document.querySelectorAll('.subnav-tab').forEach(function(t){
+    t.classList.toggle('active', t.dataset.view===name || (name==='pr-detail' && t.dataset.view==='prs'));
+  });
+
+  if(name==='overview') renderOverview();
+  if(name==='changes') renderChanges();
+  if(name==='branches') renderBranches();
+  if(name==='history') renderHistory();
+  if(name==='stashes') renderStashes();
+  if(name==='tags') renderTags();
+  if(name==='remotes') renderRemotes();
+  if(name==='prs') renderPrs();
+  if(name==='pr-detail') renderPrDetail();
+  if(name==='issues') renderIssues();
+  if(name==='actions') renderActions();
+  if(name==='releases') renderReleases();
+  if(name==='settings') renderSettings();
+}
+document.querySelectorAll('.subnav-tab').forEach(function(t){
+  t.addEventListener('click', function(){ showView(t.dataset.view); });
+});
+
+/* ============================================================
+   COMMAND PALETTE
+   ============================================================ */
+var paletteIndex = 0;
+var paletteCommands = [
+  {label:'Switch repository', icon:'folder', action:function(){ toast('Use the sidebar to pick a repository', 'info'); }},
+  {label:'Switch GitHub account', icon:'chevronDown', action:function(){ openAccountModal(); }},
+  {label:'Create branch', icon:'branch', action:function(){ openNewBranchModal(); }},
+  {label:'Checkout branch', icon:'branch', action:function(){ showView('branches'); }},
+  {label:'Fetch', icon:'refresh', action:function(){ runQuickAction('Fetch'); }},
+  {label:'Pull', icon:'down', action:function(){ runQuickAction('Pull'); }},
+  {label:'Push', icon:'up', action:function(){ runQuickAction('Push'); }},
+  {label:'Commit', icon:'commit', action:function(){ showView('changes'); }},
+  {label:'Create pull request', icon:'pr', action:function(){ openNewPrModal(); }},
+  {label:'View pull requests', icon:'pr', action:function(){ showView('prs'); }},
+  {label:'View issues', icon:'issue', action:function(){ showView('issues'); }},
+  {label:'View Actions', icon:'play', action:function(){ showView('actions'); }},
+  {label:'Open terminal', icon:'terminal', action:function(){ toggleConsole(true); toast('Console focused', 'info'); }},
+  {label:'Refresh', icon:'refreshRepo', action:function(){ toast('Refreshed '+activeRepo().name, 'success'); }},
+  {label:'Open settings', icon:'settings2', action:function(){ showView('settings'); }}
+];
+function openPalette(){
+  document.getElementById('paletteOverlay').classList.add('open');
+  var input = document.getElementById('paletteInput');
+  input.value = '';
+  paletteIndex = 0;
+  renderPalette('');
+  setTimeout(function(){ input.focus(); }, 10);
+}
+function closePalette(){ document.getElementById('paletteOverlay').classList.remove('open'); }
+function renderPalette(query){
+  var q = query.toLowerCase();
+  var matches = paletteCommands.filter(function(c){ return c.label.toLowerCase().indexOf(q) > -1; });
+  var list = document.getElementById('paletteList');
+  if(!matches.length){ list.innerHTML = '<div class="palette-empty">No matching commands</div>'; return; }
+  list.innerHTML = matches.map(function(c,i){
+    return '<div class="palette-item'+(i===paletteIndex?' active':'')+'" data-idx="'+i+'">'+
+      icon(c.icon,'icon-sm')+'<span>'+c.label+'</span>'+(i===paletteIndex?'<span class="palette-hint">Enter</span>':'')+
+    '</div>';
+  }).join('');
+  list.querySelectorAll('.palette-item').forEach(function(el){
+    el.addEventListener('mouseenter', function(){ paletteIndex = parseInt(el.dataset.idx,10); renderPalette(query); });
+    el.addEventListener('click', function(){ matches[parseInt(el.dataset.idx,10)].action(); closePalette(); });
+  });
+}
+document.getElementById('paletteInput').addEventListener('input', function(e){ paletteIndex=0; renderPalette(e.target.value); });
+document.getElementById('paletteOpenBtn').addEventListener('click', openPalette);
+document.getElementById('paletteOverlay').addEventListener('click', function(e){ if(e.target.id==='paletteOverlay') closePalette(); });
+
+document.addEventListener('keydown', function(e){
+  var paletteOpen = document.getElementById('paletteOverlay').classList.contains('open');
+  if((e.metaKey||e.ctrlKey) && e.key.toLowerCase()==='k'){
+    e.preventDefault();
+    paletteOpen ? closePalette() : openPalette();
+    return;
+  }
+  if(paletteOpen){
+    var q = document.getElementById('paletteInput').value.toLowerCase();
+    var matches = paletteCommands.filter(function(c){ return c.label.toLowerCase().indexOf(q) > -1; });
+    if(e.key==='Escape'){ closePalette(); }
+    else if(e.key==='ArrowDown'){ e.preventDefault(); paletteIndex = Math.min(paletteIndex+1, matches.length-1); renderPalette(q); }
+    else if(e.key==='ArrowUp'){ e.preventDefault(); paletteIndex = Math.max(paletteIndex-1, 0); renderPalette(q); }
+    else if(e.key==='Enter'){ if(matches[paletteIndex]){ matches[paletteIndex].action(); closePalette(); } }
+    return;
+  }
+  if(e.key==='Escape'){
+    document.querySelectorAll('.modal-overlay.open').forEach(function(m){ m.classList.remove('open'); });
+    closeNotifPanel();
+  }
+});
+
+/* ============================================================
+   ACCOUNT SWITCH MODAL
+   ============================================================ */
+function openAccountModal(preselect){
+  state.pendingAccountSelection = preselect || state.activeAccountId;
+  renderAccountOptions();
+  document.getElementById('accountModalOverlay').classList.add('open');
+}
+function renderAccountOptions(){
+  document.getElementById('accountOptions').innerHTML = accounts.map(function(a){
+    var sel = a.id === state.pendingAccountSelection;
+    return '<div class="account-option'+(sel?' selected':'')+'" data-acct="'+a.id+'">'+
+      '<span class="radio"></span>'+
+      '<span class="dot dot-'+a.color+'"></span>'+
+      '<div class="grow"><div style="font-weight:600;font-size:12.8px;">'+a.label+'</div>'+
+      '<div class="mono muted" style="font-size:11.5px;">'+a.handle+' · '+a.host+'</div></div>'+
+    '</div>';
+  }).join('');
+  document.querySelectorAll('#accountOptions .account-option').forEach(function(el){
+    el.addEventListener('click', function(){ state.pendingAccountSelection = el.dataset.acct; renderAccountOptions(); });
+  });
+}
+document.getElementById('confirmAccountSwitch').addEventListener('click', function(){
+  state.activeAccountId = state.pendingAccountSelection;
+  closeModal('accountModalOverlay');
+  toast('Active account: '+activeAccount().label+' · '+activeAccount().handle, 'success');
+  renderAll();
+});
+
+/* ============================================================
+   GENERIC CONFIRM MODAL
+   ============================================================ */
+function openConfirm(title, body, onConfirm){
+  document.getElementById('confirmTitle').textContent = title;
+  document.getElementById('confirmBody').textContent = body;
+  confirmAction = onConfirm;
+  document.getElementById('confirmModalOverlay').classList.add('open');
+}
+document.getElementById('confirmActionBtn').addEventListener('click', function(){
+  closeModal('confirmModalOverlay');
+  if(confirmAction) confirmAction();
+  confirmAction = null;
+});
+function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('[data-close]').forEach(function(b){
+  b.addEventListener('click', function(){ closeModal(b.dataset.close); });
+});
+document.querySelectorAll('.modal-overlay').forEach(function(ov){
+  ov.addEventListener('click', function(e){ if(e.target===ov) ov.classList.remove('open'); });
+});
+
+/* ============================================================
+   NOTIFICATIONS
+   ============================================================ */
+function renderNotifBadge(){
+  var unread = notifications.filter(function(n){ return !n.read; }).length;
+  var badge = document.getElementById('notifBadge');
+  if(unread>0){ badge.style.display='flex'; badge.textContent = unread>9?'9+':String(unread); }
+  else { badge.style.display='none'; }
+}
+function renderNotifPanel(){
+  var panel = document.getElementById('notifPanel');
+  var head = '<div class="notif-panel-head"><span>Notifications</span><span class="notif-mark-read" id="markAllReadBtn">Mark all read</span></div>';
+  var items = notifications.length ? notifications.map(function(n){
+    return '<div class="notif-item'+(n.read?'':' unread')+'" data-notif="'+n.id+'">'+
+      '<span class="dot"></span>'+
+      '<div><div class="notif-text">'+n.text+'</div><div class="notif-meta">'+n.repo+' · '+n.time+'</div></div>'+
+    '</div>';
+  }).join('') : '<div class="notif-empty">You are all caught up</div>';
+  panel.innerHTML = head + items;
+  var markAll = document.getElementById('markAllReadBtn');
+  if(markAll) markAll.addEventListener('click', function(){
+    notifications.forEach(function(n){ n.read = true; });
+    renderNotifPanel();
+    renderNotifBadge();
+  });
+  panel.querySelectorAll('[data-notif]').forEach(function(el){
+    el.addEventListener('click', function(){
+      var n = notifications.filter(function(x){ return x.id == el.dataset.notif; })[0];
+      n.read = true;
+      renderNotifBadge();
+      renderNotifPanel();
+      if(n.target){
+        if(n.target.view==='pr-detail'){
+          selectedPr = prs.filter(function(p){ return p.num===n.target.pr; })[0] || prs[0];
+          showView('pr-detail');
+        } else {
+          showView(n.target.view);
+        }
+      }
+      closeNotifPanel();
+    });
+  });
+}
+function toggleNotifPanel(){
+  notifOpen = !notifOpen;
+  document.getElementById('notifPanel').classList.toggle('open', notifOpen);
+  if(notifOpen) renderNotifPanel();
+}
+function closeNotifPanel(){
+  notifOpen = false;
+  document.getElementById('notifPanel').classList.remove('open');
+}
+document.getElementById('notifBtn').addEventListener('click', function(e){
+  e.stopPropagation();
+  toggleNotifPanel();
+});
+document.addEventListener('click', function(e){
+  if(notifOpen && !e.target.closest('#notifPanel') && !e.target.closest('#notifBtn')) closeNotifPanel();
+});
+
+/* ============================================================
+   CONSOLE DOCK
+   ============================================================ */
+function toggleConsole(forceOpen){
+  var dock = document.getElementById('consoleDock');
+  var willOpen = forceOpen!==undefined ? forceOpen : !dock.classList.contains('expanded');
+  dock.classList.toggle('expanded', willOpen);
+  document.getElementById('consoleChevron').style.transform = willOpen ? 'rotate(180deg)' : 'rotate(0deg)';
+}
+document.getElementById('consoleHead').addEventListener('click', function(){ toggleConsole(); });
+document.getElementById('consoleClearBtn').addEventListener('click', function(e){
+  e.stopPropagation();
+  document.getElementById('consoleBody').innerHTML = '';
+  toast('Console cleared', 'info');
+});
+document.getElementById('consoleInput').addEventListener('keydown', function(e){
+  if(e.key==='Enter' && e.target.value.trim()){
+    var cmd = e.target.value.trim();
+    consoleLog(cmd, ['Running "'+cmd+'" against '+activeRepo().name+'…', '(output streams here in the real app)']);
+    e.target.value='';
+  }
+});
+
+/* ============================================================
+   SIDEBAR TOGGLE
+   ============================================================ */
+document.getElementById('sidebarToggle').innerHTML = icon('chevronRight','icon-sm');
+document.getElementById('sidebarToggle').addEventListener('click', function(){
+  var collapsed = document.getElementById('shell').classList.toggle('sidebar-collapsed');
+});
+document.getElementById('addRepoBtn').addEventListener('click', function(){ toast('Repository picker — coming in a later phase', 'info'); });
+document.getElementById('settingsBtn').addEventListener('click', function(){ showView('settings'); });
+
+/* ============================================================
+   INITIAL CONSOLE TYPEWRITER (one orchestrated moment)
+   ============================================================ */
+function initConsole(){
+  document.getElementById('consoleCwd').textContent = activeRepo().path;
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var seq = [
+    {cmd:'git status', out:["On branch feature/dispatch-retry", "Your branch is ahead of 'origin/feature/dispatch-retry' by 2 commits.", 'Changes to be committed: 2 files', 'Changes not staged: 1 file', 'Untracked files: 1 file']},
+    {cmd:'gh auth status', out:['✓ Logged in to github.com as d2vk-vikunalabs (Work)', '✓ Token scopes: repo, workflow, read:org']}
+  ];
+  if(reduce){
+    seq.forEach(function(s){ consoleLog(s.cmd, s.out); });
+    return;
+  }
+  var i=0;
+  function step(){
+    if(i>=seq.length) return;
+    consoleLog(seq[i].cmd, seq[i].out);
+    i++;
+    setTimeout(step, 650);
+  }
+  setTimeout(step, 500);
+}
+
+/* ============================================================
+   FULL RENDER
+   ============================================================ */
+function renderAll(){
+  renderSidebar();
+  renderTopbar();
+  renderNotifBadge();
+  showView(state.activeView === 'pr-detail' ? 'prs' : state.activeView);
+}
+
+renderAll();
+initConsole();
+
+})();
+</script>
+</body>
+</html>
