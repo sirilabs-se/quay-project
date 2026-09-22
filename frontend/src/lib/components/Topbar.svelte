@@ -39,6 +39,18 @@
 		Commands
 		<span class="kbd">⌘K</span>
 	</button>
+	{#if quay.activeAccount}
+		<div
+			class="account-badge"
+			onclick={() => quay.openAccountModal()}
+			onkeydown={(e) => (e.key === "Enter" || e.key === " ") && quay.openAccountModal()}
+			role="button"
+			tabindex="0"
+		>
+			<span class="account-avatar" style="background:var(--accent-strong);">{quay.activeAccount.login.slice(0, 1).toUpperCase()}</span>
+			{quay.activeAccount.login}
+		</div>
+	{/if}
 	<button class="icon-btn" title="Settings" aria-label="Open settings" onclick={() => quay.setActiveView("settings")}>
 		<Icon name="settings2" />
 	</button>

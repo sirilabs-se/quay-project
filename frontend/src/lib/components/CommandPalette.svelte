@@ -14,6 +14,7 @@
 	let inputEl: HTMLInputElement | undefined = $state();
 
 	const commands: PaletteCommand[] = [
+		{ label: "Switch GitHub account", icon: "chevronDown", action: () => quay.openAccountModal() },
 		{ label: "Create branch", icon: "branch", action: () => quay.setActiveView("branches") },
 		{ label: "Checkout branch", icon: "branch", action: () => quay.setActiveView("branches") },
 		{ label: "Fetch", icon: "refresh", action: () => quay.runRemoteAction("fetch") },

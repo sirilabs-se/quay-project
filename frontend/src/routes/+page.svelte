@@ -8,6 +8,7 @@
 	import ToastStack from "$lib/components/ToastStack.svelte";
 	import FormModal from "$lib/components/modals/FormModal.svelte";
 	import ConfirmModal from "$lib/components/modals/ConfirmModal.svelte";
+	import AccountSwitchModal from "$lib/components/modals/AccountSwitchModal.svelte";
 	import OverviewView from "$lib/components/views/OverviewView.svelte";
 	import ChangesView from "$lib/components/views/ChangesView.svelte";
 	import BranchesView from "$lib/components/views/BranchesView.svelte";
@@ -69,4 +70,5 @@
 <CommandPalette />
 <FormModal />
 <ConfirmModal />
+<AccountSwitchModal />
 <ToastStack />

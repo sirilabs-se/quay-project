@@ -4,6 +4,7 @@
 
 	let detection = $derived(quay.detection);
 	let settings = $derived(quay.settings);
+	let anyPlaintext = $derived(quay.accounts.some((a) => !a.keyringBacked));
 
 	async function updateTheme(e: Event): Promise<void> {
 		const value = (e.target as HTMLSelectElement).value as "light" | "dark" | "system";
@@ -49,6 +50,40 @@
 		{:else}
 			<div class="muted">Checking…</div>
 		{/if}
+	</div>
+
+	<div class="section-title">Account authentication</div>
+	<div style="max-width:560px;margin-bottom:16px;">
+		{#if anyPlaintext}
+			<div class="warn-banner">
+				<Icon name="bolt" />
+				<div>
+					<strong>No OS keyring detected.</strong> No Secret Service backend (GNOME Keyring, KWallet) is running, so gh is storing at least
+					one token in plaintext at <span class="mono">~/.config/gh/hosts.yml</span> with restrictive file permissions.
+				</div>
+			</div>
+		{/if}
+		<div class="panel panel-pad">
+			{#each quay.accounts as account (account.host + account.login)}
+				<div class="cred-row">
+					<div class="row g-8" style="margin-bottom:4px;">
+						<span class="dot dot-accent"></span>
+						<strong>{account.login}</strong>
+						<span class="mono muted" style="font-size:11.5px;">{account.host}</span>
+						{#if account.host === quay.activeAccount?.host && account.login === quay.activeAccount?.login}
+							<span class="badge badge-accent">active</span>
+						{/if}
+					</div>
+					<div class="muted" style="font-size:11.5px;margin-bottom:3px;">Scopes: <span class="mono">{account.scopes.join(", ")}</span></div>
+					<div class="muted" style="font-size:11.5px;">
+						Storage: <span class="mono">{account.keyringBacked ? "OS keyring" : "~/.config/gh/hosts.yml"}</span>
+					</div>
+				</div>
+			{/each}
+			{#if quay.accounts.length === 0}
+				<div class="muted">No accounts authenticated. Run <span class="mono">gh auth login</span> to add one.</div>
+			{/if}
+		</div>
 	</div>
 
 	<div class="section-title">Preferences</div>

@@ -59,6 +59,29 @@
 				<div class="muted" style="padding:10px 7px;font-size:12px;">No repositories yet.</div>
 			{/if}
 		</div>
+
+		<div class="sidebar-section-label" style="margin-top:14px;"><span>Accounts</span></div>
+		<div>
+			{#each quay.accounts as account (account.host + account.login)}
+				<div
+					class="account-row"
+					class:active-account={quay.activeAccount?.host === account.host && quay.activeAccount?.login === account.login}
+					onclick={() => quay.openAccountModal()}
+					onkeydown={(e) => (e.key === "Enter" || e.key === " ") && quay.openAccountModal()}
+					role="button"
+					tabindex="0"
+				>
+					<span class="dot dot-accent"></span>
+					<div class="grow truncate">
+						<div class="account-name truncate">{account.login}</div>
+						<div class="account-handle truncate">{account.host}</div>
+					</div>
+					{#if quay.activeAccount?.host === account.host && quay.activeAccount?.login === account.login}
+						<Icon name="check" class="icon-sm" />
+					{/if}
+				</div>
+			{/each}
+		</div>
 	</div>
 	<div class="sidebar-foot">
 		<button class="btn btn-sm" style="width:100%;justify-content:center;" onclick={addRepository}>

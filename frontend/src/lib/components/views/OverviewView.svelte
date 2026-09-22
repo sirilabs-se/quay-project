@@ -45,6 +45,29 @@
 	{:else if !status}
 		<div class="muted">Loading…</div>
 	{:else}
+		{#if quay.repositoryAccountInfo?.mismatch && quay.repositoryAccountInfo.resolvedAccount && quay.repositoryAccountInfo.activeAccount}
+			{@const info = quay.repositoryAccountInfo}
+			{@const resolved = info.resolvedAccount!}
+			{@const active = info.activeAccount!}
+			<div class="warn-banner">
+				<Icon name="bolt" />
+				<div>
+					<strong>Account mismatch.</strong> This repository's remote resolves to
+					<strong>{resolved.login} · {resolved.host}</strong>, but <strong>{active.login} · {active.host}</strong> is active. GitHub actions
+					here will use the active account unless you switch.
+					<a
+						href="##"
+						onclick={(e) => {
+							e.preventDefault();
+							quay.openAccountModal({ host: resolved.host, login: resolved.login });
+						}}
+						style="color:var(--accent-strong);font-weight:600;"
+					>
+						Switch to {resolved.login}
+					</a>
+				</div>
+			</div>
+		{/if}
 		<div class="stat-grid" style="margin-bottom:18px;">
 			<div class="stat-box">
 				<div class="stat-label">Branch</div>

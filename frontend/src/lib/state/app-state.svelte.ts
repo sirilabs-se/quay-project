@@ -4,8 +4,10 @@ import type {
 	CommitSummary,
 	DetectionResponse,
 	FileDiff,
+	GitHubAccount,
 	Remote,
 	Repository,
+	RepositoryAccountInfo,
 	RepositoryStatus,
 	Settings,
 	Stash,
@@ -13,6 +15,7 @@ import type {
 } from "shared";
 import * as api from "$lib/api/repositories";
 import { ApiError, apiFetch } from "$lib/api/client";
+import * as githubApi from "$lib/api/github";
 import { connectEvents, connectRepositoryAction } from "$lib/api/ws";
 
 export type ViewName =
@@ -95,6 +98,12 @@ class QuayState {
 	detection = $state<DetectionResponse | null>(null);
 	settings = $state<Settings | null>(null);
 
+	accounts = $state<GitHubAccount[]>([]);
+	activeAccount = $state<GitHubAccount | null>(null);
+	repositoryAccountInfo = $state<RepositoryAccountInfo | null>(null);
+	accountModalOpen = $state(false);
+	pendingAccountSelection = $state<{ host: string; login: string } | null>(null);
+
 	toasts = $state<ToastMessage[]>([]);
 	consoleLines = $state<ConsoleLine[]>([]);
 	consoleExpanded = $state(false);
@@ -135,12 +144,44 @@ class QuayState {
 	}
 
 	async init(): Promise<void> {
-		await Promise.all([this.loadDetection(), this.loadSettings(), this.loadRepositories()]);
+		await Promise.all([this.loadDetection(), this.loadSettings(), this.loadAccounts(), this.loadRepositories()]);
 		connectEvents((repoId) => {
 			if (repoId === this.activeRepoId) {
 				void this.refreshActiveView();
 			}
 		});
+	}
+
+	async loadAccounts(): Promise<void> {
+		const { accounts, active } = await githubApi.listAccounts();
+		this.accounts = accounts;
+		this.activeAccount = active;
+	}
+
+	async loadRepositoryAccountInfo(): Promise<void> {
+		if (!this.activeRepoId) {
+			this.repositoryAccountInfo = null;
+			return;
+		}
+		this.repositoryAccountInfo = await githubApi.getRepositoryAccountInfo(this.activeRepoId);
+	}
+
+	openAccountModal(preselect?: { host: string; login: string }): void {
+		this.pendingAccountSelection = preselect ?? (this.activeAccount ? { host: this.activeAccount.host, login: this.activeAccount.login } : null);
+		this.accountModalOpen = true;
+	}
+
+	closeAccountModal(): void {
+		this.accountModalOpen = false;
+	}
+
+	async confirmAccountSwitch(): Promise<void> {
+		if (!this.pendingAccountSelection) return;
+		const { host, login } = this.pendingAccountSelection;
+		this.activeAccount = await githubApi.switchAccount(host, login);
+		this.accountModalOpen = false;
+		this.toast(`Active account: ${this.activeAccount.login} · ${this.activeAccount.host}`, "success");
+		await this.loadRepositoryAccountInfo();
 	}
 
 	async loadDetection(): Promise<void> {
@@ -182,7 +223,7 @@ class QuayState {
 		this.activeRepoId = id;
 		this.selectedFileIdx = 0;
 		this.currentDiff = null;
-		await this.refreshActiveView();
+		await Promise.all([this.refreshActiveView(), this.loadRepositoryAccountInfo()]);
 	}
 
 	async setActiveView(view: ViewName): Promise<void> {

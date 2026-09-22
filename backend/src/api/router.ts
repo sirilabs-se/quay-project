@@ -1,5 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { handleDetection } from "./detection.js";
+import { handleListAccounts, handleRepositoryAccount, handleSwitchAccount } from "./github.js";
 import { handleGetSettings, handlePutSettings } from "./settings.js";
 import {
 	handleAddRemote,
@@ -49,7 +50,11 @@ const routes: Route[] = [
 	{ method: "DELETE", pattern: /^\/api\/repositories\/(?<id>[^/]+)$/, handler: handleRemoveRepository },
 	{ method: "PATCH", pattern: /^\/api\/repositories\/(?<id>[^/]+)$/, handler: handleUpdateRepository },
 
+	{ method: "GET", pattern: /^\/api\/github\/accounts$/, handler: handleListAccounts },
+	{ method: "POST", pattern: /^\/api\/github\/accounts\/switch$/, handler: handleSwitchAccount },
+
 	{ method: "GET", pattern: /^\/api\/repositories\/(?<id>[^/]+)\/status$/, handler: handleGetStatus },
+	{ method: "GET", pattern: /^\/api\/repositories\/(?<id>[^/]+)\/account$/, handler: handleRepositoryAccount },
 	{ method: "GET", pattern: /^\/api\/repositories\/(?<id>[^/]+)\/diff$/, handler: handleGetDiff },
 
 	{ method: "POST", pattern: /^\/api\/repositories\/(?<id>[^/]+)\/stage$/, handler: handleStageFiles },
