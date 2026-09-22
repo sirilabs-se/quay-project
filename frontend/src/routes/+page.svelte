@@ -10,6 +10,7 @@
 	import ConfirmModal from "$lib/components/modals/ConfirmModal.svelte";
 	import AccountSwitchModal from "$lib/components/modals/AccountSwitchModal.svelte";
 	import ConflictEditorModal from "$lib/components/modals/ConflictEditorModal.svelte";
+	import BrowseRepositoryModal from "$lib/components/modals/BrowseRepositoryModal.svelte";
 	import OverviewView from "$lib/components/views/OverviewView.svelte";
 	import ChangesView from "$lib/components/views/ChangesView.svelte";
 	import BranchesView from "$lib/components/views/BranchesView.svelte";
@@ -47,6 +48,8 @@
 			quay.closeConflictModal();
 		} else if (quay.newPrModalOpen) {
 			quay.closeNewPrModal();
+		} else if (quay.browseModalOpen) {
+			quay.closeBrowseModal();
 		}
 		quay.closeNotifPanel();
 	}
@@ -99,5 +102,6 @@
 <ConfirmModal />
 <AccountSwitchModal />
 <ConflictEditorModal />
+<BrowseRepositoryModal />
 <NewPullRequestModal />
 <ToastStack />

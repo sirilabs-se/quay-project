@@ -4,6 +4,7 @@ import type {
 	CommitSummary,
 	DetectionResponse,
 	FileDiff,
+	BrowseResult,
 	GitHubAccount,
 	GitHubNotification,
 	IssueSummary,
@@ -28,6 +29,7 @@ import type { PullRequestStateFilter } from "$lib/api/pull-requests";
 import * as issueApi from "$lib/api/issues";
 import type { IssueStateFilter } from "$lib/api/issues";
 import * as actionsApi from "$lib/api/actions";
+import * as filesystemApi from "$lib/api/filesystem";
 import { connectEvents, connectRepositoryAction } from "$lib/api/ws";
 
 export type ViewName =
@@ -263,6 +265,47 @@ class QuayState {
 		this.repositories = [...this.repositories, repo].sort((a, b) => a.name.localeCompare(b.name));
 		this.toast(`Added ${repo.name}`, "success");
 		await this.selectRepo(repo.id);
+	}
+
+	browseModalOpen = $state(false);
+	browseResult = $state<BrowseResult | null>(null);
+	browseLoading = $state(false);
+	browseError = $state<string | null>(null);
+	browsePathInput = $state("");
+
+	async openBrowseModal(): Promise<void> {
+		this.browseModalOpen = true;
+		await this.browseTo(undefined);
+	}
+
+	closeBrowseModal(): void {
+		this.browseModalOpen = false;
+	}
+
+	async browseTo(path: string | undefined): Promise<void> {
+		this.browseLoading = true;
+		this.browseError = null;
+		try {
+			this.browseResult = await filesystemApi.browseDirectory(path);
+			this.browsePathInput = this.browseResult.path;
+		} catch (err) {
+			this.browseError = err instanceof ApiError ? err.message : "Failed to browse directory";
+		} finally {
+			this.browseLoading = false;
+		}
+	}
+
+	async browseUp(): Promise<void> {
+		if (this.browseResult?.parent) await this.browseTo(this.browseResult.parent);
+	}
+
+	async addRepositoryFromBrowser(path: string): Promise<void> {
+		try {
+			await this.addRepository(path);
+			this.browseModalOpen = false;
+		} catch (err) {
+			this.toast(err instanceof ApiError ? err.message : "Failed to add repository", "error");
+		}
 	}
 
 	async selectRepo(id: string): Promise<void> {

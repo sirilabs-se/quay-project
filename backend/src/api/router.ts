@@ -1,6 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { handleListRuns, handleRerun } from "./actions.js";
 import { handleDetection } from "./detection.js";
+import { handleBrowseDirectory } from "./filesystem.js";
 import { handleListAccounts, handleRepositoryAccount, handleSwitchAccount } from "./github.js";
 import { handleCreateIssue, handleListIssues } from "./issues.js";
 import { handleListNotifications, handleMarkNotificationsRead } from "./notifications.js";
@@ -62,6 +63,7 @@ interface Route {
 
 const routes: Route[] = [
 	{ method: "GET", pattern: /^\/api\/detection$/, handler: handleDetection },
+	{ method: "GET", pattern: /^\/api\/filesystem\/browse$/, handler: handleBrowseDirectory },
 	{ method: "GET", pattern: /^\/api\/settings$/, handler: handleGetSettings },
 	{ method: "PUT", pattern: /^\/api\/settings$/, handler: handlePutSettings },
 

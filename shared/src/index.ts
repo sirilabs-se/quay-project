@@ -6,3 +6,4 @@ export * from "./github-account.js";
 export * from "./pull-request.js";
 export * from "./issue.js";
 export * from "./actions.js";
+export * from "./filesystem.js";

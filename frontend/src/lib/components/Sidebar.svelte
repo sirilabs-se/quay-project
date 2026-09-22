@@ -9,23 +9,7 @@
 	);
 
 	function addRepository(): void {
-		quay.openFormModal({
-			title: "Add repository",
-			fields: [{ key: "path", label: "Path", type: "text", value: "" }],
-			submitLabel: "Add repository",
-			onSubmit: async (values) => {
-				const path = String(values.path ?? "").trim();
-				if (!path) {
-					quay.toast("Path is required", "info");
-					return;
-				}
-				try {
-					await quay.addRepository(path);
-				} catch (err) {
-					quay.toast(err instanceof Error ? err.message : "Failed to add repository", "error");
-				}
-			}
-		});
+		void quay.openBrowseModal();
 	}
 </script>
 
