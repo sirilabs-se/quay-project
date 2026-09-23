@@ -1,8 +1,9 @@
 import type { IncomingMessage } from "node:http";
 import type { Duplex } from "node:stream";
 import { WebSocketServer, type WebSocket } from "ws";
-import { operationQueue, repositoryService } from "../api/context.js";
+import { githubAccountService, gitService, operationQueue, repositoryService } from "../api/context.js";
 import { isHostAllowed, type AuthConfig } from "../middleware/auth.js";
+import { remoteAuthArgs } from "../services/github/git-credential.js";
 import { streamProcess } from "../services/process/exec.js";
 
 const wss = new WebSocketServer({ noServer: true });
@@ -51,10 +52,19 @@ async function runRemoteAction(ws: WebSocket, repoId: string, action: RemoteActi
 
 	try {
 		const repo = repositoryService.get(repoId);
-		const args = action === "fetch" ? ["fetch", remote] : action === "pull" ? ["pull", remote] : ["push", remote];
+		const status = await gitService.getStatus(repo.path);
+		// Quay's account switch is session-local and never touches gh's own
+		// global active account (§8) — but plain `git` over HTTPS otherwise
+		// authenticates via whatever credential helper is globally
+		// configured (commonly gh's own credential helper, tied to gh's
+		// global account), silently ignoring whatever was picked in Quay's
+		// UI. Injecting a per-invocation auth header is what actually makes
+		// the account switch apply to fetch/pull/push too.
+		const authArgs = await remoteAuthArgs(githubAccountService, status.remoteUrl).catch(() => []);
+		const actionArgs = action === "fetch" ? ["fetch", remote] : action === "pull" ? ["pull", remote] : ["push", remote];
 
 		const { code } = await operationQueue.run(repoId, () =>
-			streamProcess("git", ["-C", repo.path, ...args], {
+			streamProcess("git", ["-C", repo.path, ...authArgs, ...actionArgs], {
 				onStdout: (chunk) => send("stdout", chunk),
 				onStderr: (chunk) => send("stderr", chunk)
 			})

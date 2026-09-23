@@ -9,13 +9,13 @@ import { runProcess, type ExecResult } from "../process/exec.js";
  * (which would change gh's *global* active account for every terminal on
  * the machine). ARCHITECTURE.md §8.
  */
-async function resolveToken(account: GitHubAccount): Promise<string> {
+export async function resolveAccountToken(account: GitHubAccount): Promise<string> {
 	const { stdout } = await runProcess("gh", ["auth", "token", "--user", account.login, "--hostname", account.host]);
 	return stdout.trim();
 }
 
 export async function runGhAsAccount(repoPath: string, account: GitHubAccount, args: readonly string[]): Promise<ExecResult> {
-	const token = await resolveToken(account);
+	const token = await resolveAccountToken(account);
 	return runProcess("gh", args, {
 		cwd: repoPath,
 		env: { ...process.env, GH_TOKEN: token, GH_HOST: account.host }
@@ -24,7 +24,7 @@ export async function runGhAsAccount(repoPath: string, account: GitHubAccount, a
 
 /** Same as runGhAsAccount but for account-level calls (notifications, user info) that aren't scoped to a repo. */
 export async function runGhAsAccountGlobal(account: GitHubAccount, args: readonly string[]): Promise<ExecResult> {
-	const token = await resolveToken(account);
+	const token = await resolveAccountToken(account);
 	return runProcess("gh", args, {
 		env: { ...process.env, GH_TOKEN: token, GH_HOST: account.host }
 	});
