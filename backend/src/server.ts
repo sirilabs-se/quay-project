@@ -91,11 +91,31 @@ async function serveStatic(pathname: string, res: ServerResponse, token: string)
 		const ext = path.extname(target);
 		const raw = await readFile(target);
 		const contents = ext === ".html" ? injectSessionToken(raw, token) : raw;
-		res.writeHead(200, { "Content-Type": CONTENT_TYPES[ext] ?? "application/octet-stream" });
+		res.writeHead(200, {
+			"Content-Type": CONTENT_TYPES[ext] ?? "application/octet-stream",
+			"Cache-Control": cacheControlFor(pathname, ext)
+		});
 		res.end(contents);
 	} catch {
 		sendJson(res, 404, { error: "not_found" });
 	}
+}
+
+/**
+ * index.html carries a per-launch token baked in — a cached copy would keep
+ * sending a token from a previous (possibly dead) backend process, which is
+ * exactly the "every API call 401s after a restart" failure mode this is
+ * fixing. Hashed /immutable/ assets are safe to cache hard since their
+ * filename changes whenever their content does.
+ *
+ * Takes `ext` from the file actually served (not derived internally) since
+ * a missing file falls back to serving index.html's contents under the
+ * originally-requested pathname — that fallback must still get "no-store".
+ */
+export function cacheControlFor(pathname: string, servedExt: string): string {
+	if (servedExt === ".html") return "no-store";
+	if (pathname.includes("/immutable/")) return "public, max-age=31536000, immutable";
+	return "no-cache";
 }
 
 function injectSessionToken(html: Buffer, token: string): Buffer {
