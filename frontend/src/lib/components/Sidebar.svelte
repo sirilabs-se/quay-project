@@ -35,7 +35,7 @@
 		</div>
 	</div>
 	<div class="sidebar-scroll">
-		<div class="sidebar-section-label"><span>Repositories</span></div>
+		<div class="sidebar-section-label"><span>Local</span></div>
 		<div>
 			{#each filteredRepos as repo (repo.id)}
 				<div
@@ -59,7 +59,7 @@
 		</div>
 
 		{#if quay.remoteRepos.length > 0}
-			<div class="sidebar-section-label" style="margin-top:14px;"><span>On GitHub</span></div>
+			<div class="sidebar-section-label" style="margin-top:14px;"><span>Remote</span></div>
 			<div>
 				{#each quay.remoteRepos as repo (repo.nameWithOwner)}
 					<div class="repo-row" style="cursor:default;">
