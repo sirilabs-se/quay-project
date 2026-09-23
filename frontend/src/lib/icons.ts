@@ -3,6 +3,7 @@ export const ICONS: Record<string, string> = {
 	star: '<polygon points="12 2 14.9 8.6 22 9.3 16.6 14.1 18.2 21 12 17.3 5.8 21 7.4 14.1 2 9.3 9.1 8.6"></polygon>',
 	search: '<circle cx="11" cy="11" r="6"></circle><line x1="20" y1="20" x2="15.5" y2="15.5"></line>',
 	bell: '<path d="M6 9a6 6 0 0 1 12 0c0 4 1.5 5.5 2 6H4c.5 -.5 2 -2 2 -6Z"></path><path d="M10 19a2 2 0 0 0 4 0"></path>',
+	lock: '<rect x="5" y="11" width="14" height="10" rx="1.5"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path>',
 	branch:
 		'<circle cx="7" cy="6" r="2"></circle><circle cx="7" cy="18" r="2"></circle><circle cx="18" cy="10" r="2"></circle><line x1="7" y1="8" x2="7" y2="16"></line><path d="M7 13 C7 10 10 10 12 10 C15 10 16 10 18 10"></path>',
 	pr: '<circle cx="6" cy="6" r="2"></circle><circle cx="6" cy="18" r="2"></circle><circle cx="18" cy="18" r="2"></circle><line x1="6" y1="8" x2="6" y2="16"></line><path d="M18 16 C18 10 12 10 12 10"></path>',

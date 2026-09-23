@@ -4,12 +4,26 @@
 
 	let search = $state("");
 
+	// Repos with a definitively-resolved account belonging to someone else are
+	// hidden; repos with no remote or an ambiguous account (shared host, no
+	// single match) stay visible — we can't safely hide what we're not sure
+	// about, and always-automatic filtering was the explicit choice here.
+	let accountFilteredRepos = $derived(
+		quay.repositories.filter((r) => !r.accountLogin || !quay.activeAccount || r.accountLogin === quay.activeAccount.login)
+	);
+
 	let filteredRepos = $derived(
-		quay.repositories.filter((r) => r.name.toLowerCase().includes(search.toLowerCase()) || r.path.toLowerCase().includes(search.toLowerCase()))
+		accountFilteredRepos.filter(
+			(r) => r.name.toLowerCase().includes(search.toLowerCase()) || r.path.toLowerCase().includes(search.toLowerCase())
+		)
 	);
 
 	function addRepository(): void {
 		void quay.openBrowseModal();
+	}
+
+	function openOnGitHub(url: string): void {
+		window.open(url, "_blank", "noopener,noreferrer");
 	}
 </script>
 
@@ -43,6 +57,26 @@
 				<div class="muted" style="padding:10px 7px;font-size:12px;">No repositories yet.</div>
 			{/if}
 		</div>
+
+		{#if quay.remoteRepos.length > 0}
+			<div class="sidebar-section-label" style="margin-top:14px;"><span>On GitHub</span></div>
+			<div>
+				{#each quay.remoteRepos as repo (repo.nameWithOwner)}
+					<div class="repo-row" style="cursor:default;">
+						<span class="repo-star" title={repo.isPrivate ? "Private" : "Public"}>
+							<Icon name={repo.isPrivate ? "lock" : "folder"} class="icon-sm" />
+						</span>
+						<div class="repo-meta grow truncate">
+							<div class="repo-name truncate">{repo.name}</div>
+							<div class="repo-path truncate">{repo.nameWithOwner}</div>
+						</div>
+						<button class="icon-btn" title="Open on GitHub" aria-label="Open on GitHub" onclick={() => openOnGitHub(repo.url)}>
+							<Icon name="ext" class="icon-sm" />
+						</button>
+					</div>
+				{/each}
+			</div>
+		{/if}
 
 		<div class="sidebar-section-label" style="margin-top:14px;"><span>Accounts</span></div>
 		<div>

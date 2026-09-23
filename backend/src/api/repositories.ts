@@ -1,8 +1,9 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
+import type { Repository } from "shared";
 import { MergeConflictError } from "../services/git/git.service.js";
 import { PathEscapesRepositoryError } from "../services/git/path-guard.js";
 import { InvalidRepositoryPathError, RepositoryNotFoundError } from "../services/repository/repository.service.js";
-import { gitService, operationQueue, repoWatcher, repositoryService } from "./context.js";
+import { githubAccountService, gitService, operationQueue, repoWatcher, repositoryService } from "./context.js";
 import { readJsonBody, sendJson } from "./respond.js";
 
 function handleError(res: ServerResponse, err: unknown): void {
@@ -34,7 +35,16 @@ function queryParams(req: IncomingMessage): URLSearchParams {
 
 export async function handleListRepositories(_req: IncomingMessage, res: ServerResponse): Promise<void> {
 	try {
-		sendJson(res, 200, repositoryService.list());
+		const repos = repositoryService.list();
+		const accounts = await githubAccountService.listAccounts();
+		const withAccounts: Repository[] = await Promise.all(
+			repos.map(async (repo) => {
+				const remoteUrl = await gitService.getRemoteUrl(repo.path);
+				const { resolvedAccount } = await githubAccountService.resolveAccountForRemote(remoteUrl, accounts);
+				return { ...repo, accountLogin: resolvedAccount?.login ?? null };
+			})
+		);
+		sendJson(res, 200, withAccounts);
 	} catch (err) {
 		handleError(res, err);
 	}

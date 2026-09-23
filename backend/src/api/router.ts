@@ -2,7 +2,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { handleListRuns, handleRerun } from "./actions.js";
 import { handleDetection } from "./detection.js";
 import { handleBrowseDirectory } from "./filesystem.js";
-import { handleListAccounts, handleRepositoryAccount, handleSwitchAccount } from "./github.js";
+import { handleListAccounts, handleListRemoteRepos, handleRepositoryAccount, handleSwitchAccount } from "./github.js";
 import { handleCreateIssue, handleListIssues } from "./issues.js";
 import { handleListNotifications, handleMarkNotificationsRead } from "./notifications.js";
 import {
@@ -74,6 +74,7 @@ const routes: Route[] = [
 
 	{ method: "GET", pattern: /^\/api\/github\/accounts$/, handler: handleListAccounts },
 	{ method: "POST", pattern: /^\/api\/github\/accounts\/switch$/, handler: handleSwitchAccount },
+	{ method: "GET", pattern: /^\/api\/github\/repos$/, handler: handleListRemoteRepos },
 
 	{ method: "GET", pattern: /^\/api\/repositories\/(?<id>[^/]+)\/status$/, handler: handleGetStatus },
 	{ method: "GET", pattern: /^\/api\/repositories\/(?<id>[^/]+)\/account$/, handler: handleRepositoryAccount },

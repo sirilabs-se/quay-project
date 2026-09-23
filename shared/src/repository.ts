@@ -3,6 +3,22 @@ export interface Repository {
 	name: string;
 	path: string;
 	favorite: boolean;
+	/**
+	 * The one account this repo's remote unambiguously resolves to, or null
+	 * if there's no remote or the host has more than one authenticated
+	 * account. Computed on demand (not stored) — only present on the
+	 * GET /api/repositories list response, absent elsewhere.
+	 */
+	accountLogin?: string | null;
+}
+
+export interface RemoteRepository {
+	nameWithOwner: string;
+	name: string;
+	url: string;
+	isPrivate: boolean;
+	description: string | null;
+	updatedAt: string;
 }
 
 export interface RepositoryStatus {

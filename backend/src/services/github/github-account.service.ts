@@ -57,19 +57,30 @@ export class GitHubAccountService {
 	}
 
 	async getRepositoryAccountInfo(remoteUrl: string | null): Promise<RepositoryAccountInfo> {
-		const [resolvedHost, accounts, activeAccount] = await Promise.all([
-			this.resolveRemoteHost(remoteUrl),
-			this.listAccounts(),
-			this.getActiveAccount()
-		]);
-
-		const candidatesOnHost = resolvedHost ? accounts.filter((a) => a.host === resolvedHost) : [];
-		const resolvedAccount = candidatesOnHost.length === 1 ? candidatesOnHost[0] : null;
+		const [accounts, activeAccount] = await Promise.all([this.listAccounts(), this.getActiveAccount()]);
+		const { resolvedHost, resolvedAccount } = await this.resolveAccountForRemote(remoteUrl, accounts);
 
 		const mismatch = Boolean(
 			resolvedAccount && activeAccount && (resolvedAccount.host !== activeAccount.host || resolvedAccount.login !== activeAccount.login)
 		);
 
 		return { resolvedHost, resolvedAccount, activeAccount, mismatch };
+	}
+
+	/**
+	 * Same resolution as getRepositoryAccountInfo but taking a pre-fetched
+	 * account list — for callers resolving many repos at once (the
+	 * repository list's per-repo accountLogin), where calling listAccounts()
+	 * (a `gh auth status` subprocess) once instead of once per repo actually
+	 * matters.
+	 */
+	async resolveAccountForRemote(
+		remoteUrl: string | null,
+		accounts: GitHubAccount[]
+	): Promise<{ resolvedHost: string | null; resolvedAccount: GitHubAccount | null }> {
+		const resolvedHost = await this.resolveRemoteHost(remoteUrl);
+		const candidatesOnHost = resolvedHost ? accounts.filter((a) => a.host === resolvedHost) : [];
+		const resolvedAccount = candidatesOnHost.length === 1 ? candidatesOnHost[0] : null;
+		return { resolvedHost, resolvedAccount };
 	}
 }

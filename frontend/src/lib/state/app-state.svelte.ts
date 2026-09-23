@@ -12,6 +12,7 @@ import type {
 	PullRequestDetail,
 	PullRequestSummary,
 	Release,
+	RemoteRepository,
 	Remote,
 	Repository,
 	RepositoryAccountInfo,
@@ -116,6 +117,7 @@ class QuayState {
 	accounts = $state<GitHubAccount[]>([]);
 	activeAccount = $state<GitHubAccount | null>(null);
 	repositoryAccountInfo = $state<RepositoryAccountInfo | null>(null);
+	remoteRepos = $state<RemoteRepository[]>([]);
 	accountModalOpen = $state(false);
 	pendingAccountSelection = $state<{ host: string; login: string } | null>(null);
 
@@ -194,6 +196,7 @@ class QuayState {
 	async init(): Promise<void> {
 		await Promise.all([this.loadDetection(), this.loadSettings(), this.loadAccounts(), this.loadRepositories()]);
 		void this.loadNotifications();
+		void this.loadRemoteRepos();
 		connectEvents((repoId) => {
 			if (repoId === this.activeRepoId) {
 				void this.refreshActiveView();
@@ -215,6 +218,14 @@ class QuayState {
 		this.repositoryAccountInfo = await githubApi.getRepositoryAccountInfo(this.activeRepoId);
 	}
 
+	async loadRemoteRepos(): Promise<void> {
+		try {
+			this.remoteRepos = await githubApi.listRemoteRepos();
+		} catch {
+			this.remoteRepos = [];
+		}
+	}
+
 	openAccountModal(preselect?: { host: string; login: string }): void {
 		this.pendingAccountSelection = preselect ?? (this.activeAccount ? { host: this.activeAccount.host, login: this.activeAccount.login } : null);
 		this.accountModalOpen = true;
@@ -230,7 +241,7 @@ class QuayState {
 		this.activeAccount = await githubApi.switchAccount(host, login);
 		this.accountModalOpen = false;
 		this.toast(`Active account: ${this.activeAccount.login} · ${this.activeAccount.host}`, "success");
-		await this.loadRepositoryAccountInfo();
+		await Promise.all([this.loadRepositoryAccountInfo(), this.loadRemoteRepos()]);
 	}
 
 	async loadDetection(): Promise<void> {

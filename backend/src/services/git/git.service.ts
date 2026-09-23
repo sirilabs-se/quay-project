@@ -72,7 +72,8 @@ export class GitService {
 		};
 	}
 
-	private async getRemoteUrl(repoPath: string, remoteName: string): Promise<string | null> {
+	/** A single remote's URL, or null if it isn't configured. Lighter than getStatus() when that's all a caller needs. */
+	async getRemoteUrl(repoPath: string, remoteName = "origin"): Promise<string | null> {
 		try {
 			const stdout = await git(repoPath, ["remote", "get-url", remoteName]);
 			return stdout.trim() || null;
