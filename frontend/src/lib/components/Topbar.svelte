@@ -94,7 +94,14 @@
 			<div class="notif-empty">You are all caught up</div>
 		{:else}
 			{#each quay.notifications as notif (notif.id)}
-				<div class="notif-item" class:unread={notif.unread}>
+				<div
+					class="notif-item"
+					class:unread={notif.unread}
+					onclick={() => quay.openNotification(notif)}
+					onkeydown={(e) => (e.key === "Enter" || e.key === " ") && quay.openNotification(notif)}
+					role="button"
+					tabindex="0"
+				>
 					<span class="dot"></span>
 					<div>
 						<div class="notif-text">{notif.title}</div>

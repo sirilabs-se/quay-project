@@ -24,3 +24,7 @@ export function listNotifications(): Promise<GitHubNotification[]> {
 export function markNotificationsRead(): Promise<{ ok: true }> {
 	return apiFetch(`/api/notifications/mark-read`, { method: "POST" });
 }
+
+export function markNotificationRead(id: string): Promise<{ ok: true }> {
+	return apiFetch(`/api/notifications/${id}/mark-read`, { method: "POST" });
+}

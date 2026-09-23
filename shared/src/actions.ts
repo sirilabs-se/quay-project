@@ -32,5 +32,8 @@ export interface GitHubNotification {
 	type: string;
 	repo: string;
 	updatedAt: string;
+	/** A browser-openable github.com URL (not the api.github.com one GitHub's API gives), or null when the subject type has none (e.g. a Discussion). */
 	url: string | null;
+	/** The issue/PR number, when `type` is "Issue" or "PullRequest" and it could be parsed out of the subject URL. */
+	number: number | null;
 }

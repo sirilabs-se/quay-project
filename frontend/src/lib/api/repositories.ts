@@ -81,6 +81,10 @@ export function abortRebase(id: string): Promise<{ ok: true }> {
 	return apiFetch(`/api/repositories/${id}/rebase/abort`, { method: "POST" });
 }
 
+export function resetHard(id: string, sha: string): Promise<{ ok: true }> {
+	return apiFetch(`/api/repositories/${id}/reset`, { method: "POST", body: JSON.stringify({ sha }) });
+}
+
 export function commit(id: string, message: string, amend: boolean): Promise<CommitSummary | null> {
 	return apiFetch(`/api/repositories/${id}/commit`, { method: "POST", body: JSON.stringify({ message, amend }) });
 }

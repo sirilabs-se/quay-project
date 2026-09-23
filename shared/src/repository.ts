@@ -10,6 +10,8 @@ export interface Repository {
 	 * GET /api/repositories list response, absent elsewhere.
 	 */
 	accountLogin?: string | null;
+	/** "owner/repo" parsed from the remote URL, or null if there's no remote/it didn't parse. Same on-demand-only availability as accountLogin. */
+	nameWithOwner?: string | null;
 }
 
 export interface RemoteRepository {

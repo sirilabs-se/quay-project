@@ -2,6 +2,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Repository } from "shared";
 import { MergeConflictError } from "../services/git/git.service.js";
 import { PathEscapesRepositoryError } from "../services/git/path-guard.js";
+import { extractOwnerRepo } from "../services/github/remote-host.js";
 import { InvalidRepositoryPathError, RepositoryNotFoundError } from "../services/repository/repository.service.js";
 import { githubAccountService, gitService, operationQueue, repoWatcher, repositoryService } from "./context.js";
 import { readJsonBody, sendJson } from "./respond.js";
@@ -41,7 +42,11 @@ export async function handleListRepositories(_req: IncomingMessage, res: ServerR
 			repos.map(async (repo) => {
 				const remoteUrl = await gitService.getRemoteUrl(repo.path);
 				const { resolvedAccount } = await githubAccountService.resolveAccountForRemote(remoteUrl, accounts);
-				return { ...repo, accountLogin: resolvedAccount?.login ?? null };
+				return {
+					...repo,
+					accountLogin: resolvedAccount?.login ?? null,
+					nameWithOwner: remoteUrl ? extractOwnerRepo(remoteUrl) : null
+				};
 			})
 		);
 		sendJson(res, 200, withAccounts);
@@ -323,6 +328,21 @@ export async function handleCommitDetail(
 		const path = repoPath(params.id);
 		const detail = await operationQueue.run(params.id, () => gitService.getCommitDetail(path, params.sha));
 		sendJson(res, 200, detail);
+	} catch (err) {
+		handleError(res, err);
+	}
+}
+
+export async function handleResetHard(req: IncomingMessage, res: ServerResponse, params: Record<string, string>): Promise<void> {
+	try {
+		const body = await readJsonBody<{ sha?: string }>(req);
+		if (!body.sha) {
+			sendJson(res, 400, { error: "bad_request", message: "sha is required" });
+			return;
+		}
+		const path = repoPath(params.id);
+		await operationQueue.run(params.id, () => gitService.resetHard(path, body.sha!));
+		sendJson(res, 200, { ok: true });
 	} catch (err) {
 		handleError(res, err);
 	}

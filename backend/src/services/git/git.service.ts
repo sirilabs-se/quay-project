@@ -345,6 +345,17 @@ export class GitService {
 	async abortRebase(repoPath: string): Promise<void> {
 		await git(repoPath, ["rebase", "--abort"]);
 	}
+
+	/**
+	 * Moves the current branch to `sha` via `git reset --hard`. Real and
+	 * destructive (uncommitted changes and the commits between the old and
+	 * new HEAD are discarded from the branch, though they stay reachable via
+	 * reflog for a while) — the frontend gates this behind an explicit
+	 * confirm dialog spelling that out, same as every other destructive op.
+	 */
+	async resetHard(repoPath: string, sha: string): Promise<void> {
+		await git(repoPath, ["reset", "--hard", sha]);
+	}
 }
 
 /** Reconstructs a standalone, applyable patch for one hunk from a full `git diff` file output. */

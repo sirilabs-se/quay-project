@@ -152,6 +152,31 @@ describe("GitService history", () => {
 	});
 });
 
+describe("GitService.resetHard", () => {
+	it("moves the branch to the given commit and discards later commits from the log", async () => {
+		const before = await git.getLog(repoPath);
+		const targetSha = before[0].sha;
+		await writeAndCommit(repoPath, "f.txt", "f\n", "Add f.txt (to be reset away)");
+		expect((await git.getLog(repoPath))[0].message).toBe("Add f.txt (to be reset away)");
+
+		await git.resetHard(repoPath, targetSha);
+
+		const after = await git.getLog(repoPath);
+		expect(after[0].sha).toBe(targetSha);
+		expect(after.map((c) => c.message)).not.toContain("Add f.txt (to be reset away)");
+	});
+
+	it("discards uncommitted working-tree changes too", async () => {
+		const [current] = await git.getLog(repoPath);
+		await writeFile(path.join(repoPath, "README.md"), "uncommitted change\n");
+		expect((await git.getStatus(repoPath)).modified).not.toEqual([]);
+
+		await git.resetHard(repoPath, current.sha);
+
+		expect((await git.getStatus(repoPath)).modified).toEqual([]);
+	});
+});
+
 describe("GitService stashes", () => {
 	it("saves, lists, and pops a stash", async () => {
 		await writeFile(path.join(repoPath, "README.md"), "stashed change\n");

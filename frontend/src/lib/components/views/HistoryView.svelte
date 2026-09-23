@@ -12,10 +12,8 @@
 	function resetToHere(sha: string): void {
 		quay.openConfirm(
 			`Reset ${quay.status?.branch ?? "current branch"} to ${sha.slice(0, 7)}?`,
-			"This moves the current branch to this commit. Commits after it stay in your reflog for a while but are no longer reachable from the branch.",
-			async () => {
-				quay.toast("Hard reset isn't wired up yet — coming with the rest of Advanced Git.", "info");
-			}
+			"This moves the current branch to this commit and discards any uncommitted changes. Commits after it stay in your reflog for a while but are no longer reachable from the branch. This can't be undone from Quay.",
+			() => quay.resetToCommit(sha)
 		);
 	}
 </script>

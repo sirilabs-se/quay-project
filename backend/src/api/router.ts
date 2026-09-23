@@ -4,7 +4,7 @@ import { handleDetection } from "./detection.js";
 import { handleBrowseDirectory } from "./filesystem.js";
 import { handleListAccounts, handleListRemoteRepos, handleRepositoryAccount, handleSwitchAccount } from "./github.js";
 import { handleCreateIssue, handleListIssues } from "./issues.js";
-import { handleListNotifications, handleMarkNotificationsRead } from "./notifications.js";
+import { handleListNotifications, handleMarkNotificationRead, handleMarkNotificationsRead } from "./notifications.js";
 import {
 	handleClosePullRequest,
 	handleCreatePullRequest,
@@ -22,6 +22,7 @@ import {
 	handleCheckoutBranch,
 	handleCommit,
 	handleCommitDetail,
+	handleResetHard,
 	handleContinueMerge,
 	handleContinueRebase,
 	handleCreateBranch,
@@ -106,6 +107,7 @@ const routes: Route[] = [
 
 	{ method: "GET", pattern: /^\/api\/repositories\/(?<id>[^/]+)\/history$/, handler: handleGetHistory },
 	{ method: "GET", pattern: /^\/api\/repositories\/(?<id>[^/]+)\/commits\/(?<sha>[^/]+)$/, handler: handleCommitDetail },
+	{ method: "POST", pattern: /^\/api\/repositories\/(?<id>[^/]+)\/reset$/, handler: handleResetHard },
 
 	{ method: "GET", pattern: /^\/api\/repositories\/(?<id>[^/]+)\/stashes$/, handler: handleGetStashes },
 	{ method: "POST", pattern: /^\/api\/repositories\/(?<id>[^/]+)\/stashes$/, handler: handleStashSave },
@@ -136,7 +138,8 @@ const routes: Route[] = [
 	{ method: "POST", pattern: /^\/api\/repositories\/(?<id>[^/]+)\/releases$/, handler: handleCreateRelease },
 
 	{ method: "GET", pattern: /^\/api\/notifications$/, handler: handleListNotifications },
-	{ method: "POST", pattern: /^\/api\/notifications\/mark-read$/, handler: handleMarkNotificationsRead }
+	{ method: "POST", pattern: /^\/api\/notifications\/mark-read$/, handler: handleMarkNotificationsRead },
+	{ method: "POST", pattern: /^\/api\/notifications\/(?<id>[^/]+)\/mark-read$/, handler: handleMarkNotificationRead }
 ];
 
 /** Returns true if a route matched (and handled the response), false otherwise. */

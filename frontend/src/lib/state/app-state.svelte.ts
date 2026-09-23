@@ -578,6 +578,19 @@ class QuayState {
 		this.selectedCommitDetail = await api.getCommitDetail(this.activeRepoId, sha);
 	}
 
+	async resetToCommit(sha: string): Promise<void> {
+		if (!this.activeRepoId) return;
+		try {
+			await api.resetHard(this.activeRepoId, sha);
+			this.consoleLog(`git reset --hard ${sha.slice(0, 7)}`, [`HEAD is now at ${sha.slice(0, 7)}`]);
+			this.toast(`Reset ${this.status?.branch ?? "branch"} to ${sha.slice(0, 7)}`, "success");
+			await this.refreshHistory();
+			await this.refreshStatus();
+		} catch (err) {
+			this.toast(err instanceof ApiError ? err.message : "Reset failed", "error");
+		}
+	}
+
 	async refreshStashes(id: string = this.activeRepoId!): Promise<void> {
 		if (!id) return;
 		this.stashes = await api.getStashes(id);
@@ -1003,6 +1016,33 @@ class QuayState {
 		} catch (err) {
 			this.toast(err instanceof ApiError ? err.message : "Failed to mark notifications read", "error");
 		}
+	}
+
+	/**
+	 * Navigates within Quay when the notification's repo is one we have
+	 * registered locally and we can tell what it points at (PR or issue,
+	 * with a parsed number); otherwise falls back to opening it on
+	 * github.com, since there's nothing in-app to jump to for e.g. a
+	 * Discussion/CheckSuite notification or a repo we haven't added.
+	 */
+	async openNotification(n: GitHubNotification): Promise<void> {
+		n.unread = false;
+		void actionsApi.markNotificationRead(n.id).catch(() => undefined);
+
+		const localRepo = this.repositories.find((r) => r.nameWithOwner?.toLowerCase() === n.repo.toLowerCase());
+		if (localRepo && n.number && (n.type === "PullRequest" || n.type === "Issue")) {
+			await this.selectRepo(localRepo.id);
+			if (n.type === "PullRequest") {
+				await this.openPullRequest(n.number);
+			} else {
+				await this.setActiveView("issues");
+			}
+			this.closeNotifPanel();
+			return;
+		}
+
+		if (n.url) window.open(n.url, "_blank", "noopener,noreferrer");
+		this.closeNotifPanel();
 	}
 }
 
