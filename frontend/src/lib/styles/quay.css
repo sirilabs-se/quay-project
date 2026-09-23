@@ -1,6 +1,9 @@
-/* Ported from quay-ux-mockup_v02.html's design system — kept byte-for-byte
-   compatible with its class names/custom properties so components built
-   against the mockup markup render identically. */
+/* Dark palette ported from quay-ux-mockup_v02.html's design system — kept
+   byte-for-byte compatible with its class names/custom properties so
+   components built against the mockup markup render identically. This is
+   the default (and only mockup-specified) look; the [data-theme="light"]
+   block below is Quay's own addition, not from the mockup, since the
+   Settings "Theme" control needs an actual light palette to switch to. */
 :root {
 	--bg-canvas: #12151a;
 	--bg-surface: #181c23;
@@ -8,6 +11,8 @@
 	--bg-surface-3: #262c37;
 	--border: #2b313d;
 	--border-subtle: #20252e;
+	--border-strong: #3a4250;
+	--scrollbar-thumb-hover: #323a47;
 	--text-primary: #e7eaf0;
 	--text-secondary: #9aa3b4;
 	--text-muted: #5c6472;
@@ -27,6 +32,21 @@
 	--teal: #3fb6ae;
 	--teal-soft: rgba(63, 182, 174, 0.14);
 
+	/* Diff text needs enough contrast against the diff row's own tinted
+	   background, which is a different requirement from --green/--red
+	   (used for icons/badges against a plain surface) — light, pastel-ish
+	   in dark mode, darker/saturated in light mode. */
+	--diff-add-text: #bfe8d3;
+	--diff-del-text: #f3c3c6;
+
+	/* The console stays a fixed dark "terminal" look in both themes,
+	   matching how most editors' integrated terminals don't flip with the
+	   surrounding UI — so these are plain constants, not redefined under
+	   [data-theme="light"]. */
+	--console-bg: #0f1216;
+	--console-text: #d7dbe0;
+	--console-text-secondary: #9aa3b4;
+
 	--radius-sm: 4px;
 	--radius-md: 6px;
 	--font-sans:
@@ -40,6 +60,23 @@
 	--subnav-h: 42px;
 	--console-h: 230px;
 	--console-h-collapsed: 34px;
+}
+
+:root[data-theme="light"] {
+	--bg-canvas: #f5f6f8;
+	--bg-surface: #ffffff;
+	--bg-surface-2: #eef0f3;
+	--bg-surface-3: #e3e6ea;
+	--border: #d7dbe0;
+	--border-subtle: #e6e9ed;
+	--border-strong: #c3c8cf;
+	--scrollbar-thumb-hover: #b7bcc4;
+	--text-primary: #1b1f27;
+	--text-secondary: #57606f;
+	--text-muted: #8790a0;
+
+	--diff-add-text: #15733f;
+	--diff-del-text: #b3261e;
 }
 
 *,
@@ -98,7 +135,7 @@ body.quay-shell {
 	border: 2px solid var(--bg-canvas);
 }
 .quay-shell ::-webkit-scrollbar-thumb:hover {
-	background: #323a47;
+	background: var(--scrollbar-thumb-hover);
 }
 
 .quay-shell :focus-visible {
@@ -436,7 +473,7 @@ body.quay-shell {
 	cursor: pointer;
 }
 .branch-pill:hover {
-	border-color: #3a4250;
+	border-color: var(--border-strong);
 }
 .account-badge {
 	display: inline-flex;
@@ -451,7 +488,7 @@ body.quay-shell {
 	font-weight: 600;
 }
 .account-badge:hover {
-	border-color: #3a4250;
+	border-color: var(--border-strong);
 }
 .account-avatar {
 	width: 16px;
@@ -922,7 +959,7 @@ body.quay-shell {
 	background: rgba(76, 195, 138, 0.09);
 }
 .diff-add .diff-content {
-	color: #bfe8d3;
+	color: var(--diff-add-text);
 }
 .diff-add .diff-ln {
 	background: rgba(76, 195, 138, 0.13);
@@ -931,7 +968,7 @@ body.quay-shell {
 	background: rgba(229, 99, 107, 0.09);
 }
 .diff-del .diff-content {
-	color: #f3c3c6;
+	color: var(--diff-del-text);
 }
 .diff-del .diff-ln {
 	background: rgba(229, 99, 107, 0.13);
@@ -1291,7 +1328,7 @@ table.datatable {
 	height: var(--console-h-collapsed);
 	flex-shrink: 0;
 	border-top: 1px solid var(--border);
-	background: #0f1216;
+	background: var(--console-bg);
 	display: flex;
 	flex-direction: column;
 	transition: height 0.15s ease;
@@ -1341,10 +1378,10 @@ table.datatable {
 	color: var(--accent-strong);
 }
 .console-cmd {
-	color: var(--text-primary);
+	color: var(--console-text);
 }
 .console-out {
-	color: var(--text-secondary);
+	color: var(--console-text-secondary);
 }
 .console-out-err {
 	color: var(--red);
@@ -1366,6 +1403,10 @@ table.datatable {
 	background: transparent;
 	border: none;
 	padding: 0;
+	color: var(--console-text);
+}
+.console-input-row input::placeholder {
+	color: var(--console-text-secondary);
 }
 .console-input-row input:focus {
 	box-shadow: none;
