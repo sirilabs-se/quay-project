@@ -19,13 +19,26 @@ export function isHostAllowed(req: IncomingMessage, config: AuthConfig): boolean
 	return typeof host === "string" && config.allowedHosts.includes(host);
 }
 
+/**
+ * Browsers only attach `Origin` when it's actually needed to prove cross-
+ * origin-ness — it's mandatory (and unspoofable by page JS) on every
+ * cross-origin request, but commonly omitted on a simple same-origin GET
+ * fetch. So the check has to be "if present, it must match" rather than
+ * "must be present and match": requiring it unconditionally would reject
+ * legitimate same-origin GETs while providing no extra defense, since an
+ * attacker's cross-origin request can't omit Origin in the first place —
+ * Host validation (always present) is what actually carries the weight
+ * against a forged/cross-origin request here.
+ */
+function isOriginAllowed(req: IncomingMessage, config: AuthConfig): boolean {
+	const origin = req.headers.origin;
+	if (typeof origin !== "string") return true;
+	return config.allowedOrigins.includes(origin);
+}
+
 export function isApiRequestAuthorized(req: IncomingMessage, config: AuthConfig): boolean {
 	if (!isHostAllowed(req, config)) return false;
-
-	const origin = req.headers.origin;
-	if (typeof origin !== "string" || !config.allowedOrigins.includes(origin)) {
-		return false;
-	}
+	if (!isOriginAllowed(req, config)) return false;
 
 	const token = req.headers[SESSION_TOKEN_HEADER];
 	return token === config.token;

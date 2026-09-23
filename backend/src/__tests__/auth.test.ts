@@ -67,4 +67,12 @@ describe("isApiRequestAuthorized", () => {
 		});
 		expect(isApiRequestAuthorized(request, config)).toBe(false);
 	});
+
+	it("accepts a request with a matching host and token but no Origin header at all", () => {
+		// Real browsers commonly omit Origin on a simple same-origin GET fetch
+		// — only cross-origin requests are guaranteed to carry it. Requiring
+		// it unconditionally would reject legitimate same-origin traffic.
+		const request = req({ host: "127.0.0.1:4317", "x-quay-session-token": "secret-token" });
+		expect(isApiRequestAuthorized(request, config)).toBe(true);
+	});
 });
