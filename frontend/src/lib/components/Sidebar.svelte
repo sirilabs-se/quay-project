@@ -70,6 +70,9 @@
 							<div class="repo-name truncate">{repo.name}</div>
 							<div class="repo-path truncate">{repo.nameWithOwner}</div>
 						</div>
+						<button class="icon-btn" title="Clone" aria-label="Clone {repo.nameWithOwner}" onclick={() => quay.openCloneModal(repo)}>
+							<Icon name="down" class="icon-sm" />
+						</button>
 						<button class="icon-btn" title="Open on GitHub" aria-label="Open on GitHub" onclick={() => openOnGitHub(repo.url)}>
 							<Icon name="ext" class="icon-sm" />
 						</button>

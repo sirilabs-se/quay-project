@@ -39,6 +39,29 @@ export function connectRepositoryAction(
 	return ws;
 }
 
+export interface CloneHandlers {
+	onStdout?: (chunk: string) => void;
+	onStderr?: (chunk: string) => void;
+	onDone?: (code: number, path: string) => void;
+	onError?: (message: string) => void;
+}
+
+/** Streams `git clone` output over WS, same token-as-query-param pattern as connectRepositoryAction. */
+export function connectClone(nameWithOwner: string, dest: string, handlers: CloneHandlers): WebSocket {
+	const token = getSessionToken() ?? "";
+	const ws = new WebSocket(wsUrl("/ws/clone", { token, repo: nameWithOwner, dest }));
+	ws.addEventListener("message", (event) => {
+		const msg = JSON.parse(event.data as string) as { type: string; data: string };
+		if (msg.type === "stdout") handlers.onStdout?.(msg.data);
+		else if (msg.type === "stderr") handlers.onStderr?.(msg.data);
+		else if (msg.type === "done") {
+			const { code, path } = JSON.parse(msg.data) as { code: number; path: string };
+			handlers.onDone?.(code, path);
+		} else if (msg.type === "error") handlers.onError?.(msg.data);
+	});
+	return ws;
+}
+
 export function connectEvents(onRepoChanged: (repoId: string) => void): WebSocket {
 	const token = getSessionToken() ?? "";
 	const ws = new WebSocket(wsUrl("/ws/events", { token }));

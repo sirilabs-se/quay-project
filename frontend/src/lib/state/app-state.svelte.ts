@@ -31,7 +31,7 @@ import * as issueApi from "$lib/api/issues";
 import type { IssueStateFilter } from "$lib/api/issues";
 import * as actionsApi from "$lib/api/actions";
 import * as filesystemApi from "$lib/api/filesystem";
-import { connectEvents, connectRepositoryAction } from "$lib/api/ws";
+import { connectClone, connectEvents, connectRepositoryAction } from "$lib/api/ws";
 
 export type ViewName =
 	| "overview"
@@ -188,6 +188,11 @@ class QuayState {
 
 	consoleLog(cmd: string, lines: string[] = [], isErr = false): void {
 		this.consoleLines.push({ kind: "cmd", text: cmd });
+		this.consoleAppend(lines, isErr);
+	}
+
+	/** Output lines with no new command prompt — for streamed chunks following a consoleLog that already printed the command once. */
+	consoleAppend(lines: string[], isErr = false): void {
 		for (const line of lines) {
 			this.consoleLines.push({ kind: isErr ? "err" : "out", text: line });
 		}
@@ -279,12 +284,23 @@ class QuayState {
 	}
 
 	browseModalOpen = $state(false);
+	browseMode = $state<"add" | "clone">("add");
+	cloneTarget = $state<RemoteRepository | null>(null);
 	browseResult = $state<BrowseResult | null>(null);
 	browseLoading = $state(false);
 	browseError = $state<string | null>(null);
 	browsePathInput = $state("");
 
 	async openBrowseModal(): Promise<void> {
+		this.browseMode = "add";
+		this.cloneTarget = null;
+		this.browseModalOpen = true;
+		await this.browseTo(undefined);
+	}
+
+	async openCloneModal(repo: RemoteRepository): Promise<void> {
+		this.browseMode = "clone";
+		this.cloneTarget = repo;
 		this.browseModalOpen = true;
 		await this.browseTo(undefined);
 	}
@@ -317,6 +333,39 @@ class QuayState {
 		} catch (err) {
 			this.toast(err instanceof ApiError ? err.message : "Failed to add repository", "error");
 		}
+	}
+
+	async cloneIntoBrowsedFolder(parentDir: string): Promise<void> {
+		const repo = this.cloneTarget;
+		if (!repo) return;
+		this.browseModalOpen = false;
+		this.consoleExpanded = true;
+		const dest = `${parentDir.replace(/\/+$/, "")}/${repo.name}`;
+		this.consoleLog(`git clone https://github.com/${repo.nameWithOwner}.git ${dest}`);
+		await new Promise<void>((resolve) => {
+			connectClone(repo.nameWithOwner, dest, {
+				onStdout: (chunk) => this.consoleAppend([chunk.trim()]),
+				onStderr: (chunk) => this.consoleAppend([chunk.trim()], true),
+				onDone: async (code, path) => {
+					if (code === 0) {
+						this.toast(`Cloned ${repo.name}`, "success");
+						try {
+							await this.addRepository(path);
+							await this.loadRemoteRepos();
+						} catch (err) {
+							this.toast(err instanceof ApiError ? err.message : "Cloned, but failed to register the repository", "error");
+						}
+					} else {
+						this.toast(`Clone failed (exit code ${code})`, "error");
+					}
+					resolve();
+				},
+				onError: (message) => {
+					this.toast(`Clone failed: ${message}`, "error");
+					resolve();
+				}
+			});
+		});
 	}
 
 	async selectRepo(id: string): Promise<void> {
@@ -631,8 +680,8 @@ class QuayState {
 		this.consoleExpanded = true;
 		await new Promise<void>((resolve) => {
 			connectRepositoryAction(this.activeRepoId!, action, "origin", {
-				onStdout: (chunk) => this.consoleLog(`git ${action}`, [chunk.trim()]),
-				onStderr: (chunk) => this.consoleLog(`git ${action}`, [chunk.trim()], true),
+				onStdout: (chunk) => this.consoleAppend([chunk.trim()]),
+				onStderr: (chunk) => this.consoleAppend([chunk.trim()], true),
 				onDone: async (code) => {
 					this.toast(code === 0 ? `${action} complete` : `${action} failed`, code === 0 ? "success" : "error");
 					await this.refreshStatus();

@@ -6,6 +6,7 @@ import { SESSION_TOKEN_WINDOW_KEY } from "shared";
 import { routeApiRequest } from "./api/router.js";
 import { sendJson } from "./api/respond.js";
 import { isApiRequestAuthorized, isHostAllowed, type AuthConfig } from "./middleware/auth.js";
+import { handleCloneUpgrade } from "./ws/clone.js";
 import { handleEventsUpgrade } from "./ws/events.js";
 import { handleRepositoryActionUpgrade } from "./ws/repository-actions.js";
 
@@ -35,7 +36,10 @@ export function createQuayServer(config: AuthConfig): Server {
 	});
 
 	server.on("upgrade", (req, socket, head) => {
-		const handled = handleRepositoryActionUpgrade(req, socket, head, config) || handleEventsUpgrade(req, socket, head, config);
+		const handled =
+			handleRepositoryActionUpgrade(req, socket, head, config) ||
+			handleEventsUpgrade(req, socket, head, config) ||
+			handleCloneUpgrade(req, socket, head, config);
 		if (!handled) socket.destroy();
 	});
 
